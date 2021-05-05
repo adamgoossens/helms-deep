@@ -1,0 +1,10 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: stackrox
+  annotations:
+    openshift.io/display-name: HELMS DEEP Advanced Cluster Security
+spec:
+  finalizers:
+    - kubernetes

@@ -1,0 +1,9 @@
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: helms-deep-single-sign-on-og
+  namespace: helms-deep-single-sign-on
+spec:
+  targetNamespaces:
+    - helms-deep-single-sign-on

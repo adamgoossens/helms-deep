@@ -1,0 +1,10 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: open-cluster-management
+  annotations:
+    openshift.io/display-name: HELMS DEEP Advanced Cluster Management
+spec:
+  finalizers:
+    - kubernetes

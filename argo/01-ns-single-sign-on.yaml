@@ -1,0 +1,10 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: helms-deep-sso
+  annotations:
+    openshift.io/display-name: HELMS DEEP Single Sign On
+spec:
+  finalizers:
+    - kubernetes
