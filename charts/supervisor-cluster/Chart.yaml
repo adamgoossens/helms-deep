@@ -1,0 +1,12 @@
+apiVersion: v2
+name: supervisor-cluster
+description: Deploys core services on the Supervisor cluster (ACM, ACS, SSO subscriptions, etc).
+type: application
+version: 0.1.0
+appVersion: "0.0.1"
+
+dependencies:
+- name: stackrox-central-services
+  version: 59.0.0
+  repository: https://mirror.openshift.com/pub/rhacs/charts/
+

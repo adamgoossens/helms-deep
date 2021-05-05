@@ -1,0 +1,9 @@
+# configuration for ACS on the supervisor cluster.
+# expose via route.
+stackrox-central-services:
+  imagePullSecrets:
+    allowNone: true
+  central:
+    exposure:
+      route:
+        enabled: true
