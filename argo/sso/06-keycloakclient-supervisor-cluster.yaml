@@ -5,7 +5,7 @@ metadata:
   name: supervisor-cluster-client
   namespace: helms-deep-sso
   labels:
-    app: app=helms-deep-sso
+    app: helms-deep-sso
   annotations:
     argocd.argoproj.io/sync-wave: "60"
 spec:
