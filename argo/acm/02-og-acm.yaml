@@ -1,0 +1,11 @@
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: helms-deep-acm-og
+  namespace: open-cluster-management
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  targetNamespaces:
+    - open-cluster-management
