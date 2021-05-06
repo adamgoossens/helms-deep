@@ -35,15 +35,16 @@
       register: k8s_auth_results
 
     - name: get cluster DNS
-      community.kubernetes.k8s:
+      community.kubernetes.k8s_info:
         api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+        api_version: config.openshift.io/v1
         kind: DNS
         namespace: openshift-config
         name: cluster
       register: cluster_dns
 
     - set_fact:
-        cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain) }}"
+        cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain }}"
 
     - name: apply kubernetes resources - pre-argocd
       community.kubernetes.k8s:
@@ -205,23 +206,39 @@
             clientSecret: "{{ client_secret.resources[0].data.CLIENT_SECRET }}"
           type: Opaque
 
-    - name: configure cluster OAuth to HELMS DEEP SSO realm
-      community.kubernetes.k8s:
+    - name: get OAuth cluster config
+      community.kubernetes.k8s_info:
         api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        merge_type: 'strategic-merge'
-        api_version: 'config.openshift.io/v1'
+        api_version: config.openshift.io/v1
         kind: OAuth
         name: cluster
+      register: oauth
+
+    - name: TODO FIXME UGLY - configure cluster OAuth to HELMS DEEP SSO realm
+      community.kubernetes.k8s:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+        merge_type: 'merge'
         definition:
+          api_version: 'config.openshift.io/v1'
+          kind: OAuth
+          metadata:
+            name: cluster
+            namespace: openshift-config
           spec:
             identityProviders:
-            - name: "HELMS DEEP Single Sign On"
+            - htpasswd:
+                fileData:
+                  name: htpasswd-secret
+              mappingMethod: claim
+              name: htpasswd_provider
+              type: HTPasswd
+            - name: "helms-deep-single-sign-on"
               challenge: true
               login: true
               mappingMethod: claim
               type: OpenID
               openID:
-                clientID: "{{ client_secret.resources[0].data.CLIENT_ID }}"
+                clientID: "helms-deep-supervisor"
                 clientSecret:
                   name: "helms-deep-sso-client-secret"
                 extraScopes:
