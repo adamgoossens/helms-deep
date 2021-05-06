@@ -1,0 +1,24 @@
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakClient
+metadata:
+	name: supervisor-cluster-client
+	namespace: helms-deep-sso
+	labels:
+		app: sso
+spec:
+	realmSelector:
+		matchLabels:
+			app: helms-deep-realm
+	client:
+		clientId: helms-deep-supervisor
+		name: "HELMS DEEP Supervisor Cluster"
+		enabled: true
+		clientAuthenticatorType: client-secret
+		publicClient: false
+		redirectUris:
+			- 'https://console-openshift-console.apps.{{ cluster_basedomain }}/*'
+			- 'https://api.{{ cluster_basedomain }}/*'
+			- 'https://oauth-openshift.apps.{{ cluster_basedomain }}/*'
+		rootUrl: 'https://console-openshift-console.apps.{{ cluster_basedomain }}/'
+		protocol: openid-connect
+		standardFlowEnabled: true

@@ -16,5 +16,4 @@ spec:
   realm:
     enabled: true
     displayName: HELMS DEEP
-    realm: helms-deep
-    id: helms-deep
+    realm: "helms-deep"
