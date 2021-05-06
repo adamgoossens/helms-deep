@@ -4,8 +4,8 @@ kind: Subscription
 metadata:
   name: advanced-cluster-management
   namespace: open-cluster-management
-	annotations:
-		argocd.argoproj.io/sync-wave: "30"
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
 spec:
   channel: release-2.2
   installPlanApproval: Automatic
