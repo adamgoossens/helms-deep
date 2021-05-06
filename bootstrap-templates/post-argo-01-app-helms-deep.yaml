@@ -7,11 +7,11 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   destination:
-    namespace: argo
+    namespace: argocd
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: argocd
+    path: argo
     repoURL: git@github.com:adamgoossens/helms-deep.git
     targetRevision: main
   syncPolicy:
