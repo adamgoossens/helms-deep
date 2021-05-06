@@ -1,0 +1,17 @@
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: supervisor-cluster-client
+  labels:
+    app: app=helms-deep-sso
+  annotations:
+    argocd.argoproj.io/sync-wave: "60"
+spec:
+  realmSelector:
+     matchLabels:
+      realm: helms-deep
+      app: sso
+  client:
+    name: "HELMS DEEP Supervisor Cluster"
+    clientId: helms-deep-supervisor
