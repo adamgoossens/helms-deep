@@ -6,4 +6,4 @@ metadata:
   namespace: helms-deep-sso
 spec:
   targetNamespaces:
-    - helms-deep-single-sign-on
+    - helms-deep-sso
