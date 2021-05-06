@@ -32,13 +32,13 @@
         password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
       register: k8s_auth_results
 
-    - name: apply kubernetes resources
+    - name: apply kubernetes resources - pre-argocd
       community.kubernetes.k8s:
         api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         merge_type: 'merge'
         definition: "{{ lookup('file', item) | from_yaml }}"
       with_fileglob:
-        - "bootstrap-templates/*.yaml"
+        - "bootstrap-templates/pre-argo-*.yaml"
 
     - name: wait for argocd to rollout
       community.kubernetes.k8s_info:
@@ -95,7 +95,7 @@
           Cookie: "argocd.token={{ auth_token }}"
         body_format: json
         body:
-          repo: "git@github.com:adamgoossens/dod-devsecops-state.git"
+          repo: "git@github.com:adamgoossens/helms-deep.git"
         validate_certs: false
       register: repo
       failed_when:
@@ -112,8 +112,16 @@
         body_format: json
         body:
           name: "devsecops-state"
-          repo: "git@github.com:adamgoossens/dod-devsecops-state.git"
+          repo: "git@github.com:adamgoossens/helms-deep.git"
           sshPrivateKey: "{{ lookup('file', lookup('env', 'SSH_PRIVATE_KEY_FILE')) }}"
           upsert: "true"
         validate_certs: false
       register: create_repo
+
+    - name: apply kubernetes resources - post-argocd
+      community.kubernetes.k8s:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+        merge_type: 'merge'
+        definition: "{{ lookup('file', item) | from_yaml }}"
+      with_fileglob:
+        - "bootstrap-templates/post-argo-*.yaml"
