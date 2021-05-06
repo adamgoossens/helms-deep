@@ -3,6 +3,7 @@ apiVersion: keycloak.org/v1alpha1
 kind: KeycloakClient
 metadata:
   name: supervisor-cluster-client
+  namespace: helms-deep-sso
   labels:
     app: app=helms-deep-sso
   annotations:
