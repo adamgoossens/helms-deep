@@ -4,6 +4,8 @@ kind: Subscription
 metadata:
   name: quay-operator
   namespace: openshift-operators
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
 spec:
   channel: quay-v3.5
   installPlanApproval: Automatic

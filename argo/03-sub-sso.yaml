@@ -4,6 +4,8 @@ kind: Subscription
 metadata:
   name: rhsso-operator
   namespace: helms-deep-sso
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
 spec:
   channel: alpha
   installPlanApproval: Automatic
