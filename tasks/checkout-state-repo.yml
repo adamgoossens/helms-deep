@@ -1,0 +1,22 @@
+---
+- name: scm - generate tempdir for checkout
+  tempfile:
+    state: directory
+  register: tempdir
+
+- set_fact:
+    scm_dir: "{{ tempdir.path }}"
+    scm_branch: "main"
+
+# due to a bug in tower/awx, the required trailing newline isn't added to
+# the private key tempfile. Add one. Without it, SSH will complain that the
+# key is in an invalid format.
+- shell: "echo '' >> {{ key_file }}"
+
+- name: scm - checkout state repository
+  ansible.builtin.git:
+    repo: "{{ scm_state_repo }}"
+    dest: "{{ scm_dir }}"
+    version: "{{ scm_branch }}"
+    key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
+    accept_hostkey: 'yes'

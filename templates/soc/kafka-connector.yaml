@@ -1,0 +1,37 @@
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaConnector
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: '50'
+  name: {{ project_name }}-{{ project_environment }}-s3-sink
+  namespace: "{{ namespace }}"
+  labels:
+    strimzi.io/cluster: kafka-connect
+spec:
+  class: org.apache.camel.kafkaconnector.aws2s3.CamelAws2s3SinkConnector
+  config:
+    # S3 connection details (these come from a secret mounted in)
+    camel.component.aws2-s3.accessKey: ${file:/opt/kafka/external-configuration/connector-config/credentials:access_key}
+    camel.component.aws2-s3.secretKey: ${file:/opt/kafka/external-configuration/connector-config/credentials:secret_key}
+    camel.component.aws2-s3.region: ${file:/opt/kafka/external-configuration/connector-config/credentials:region}
+
+    # details for the destination bucket and object name
+    camel.sink.endpoint.keyName: {{ s3_object_key }}-${date:now:HHmmss}
+    camel.sink.endpoint.autoCreateBucket: true
+    camel.sink.path.bucketNameOrArn: {{ s3_bucket }}-${date:now:yyyyMMdd-HH}
+
+    # basic string aggregation - concatenates incoming messages together.
+    # maximum of 750 rows in a single S3 object
+    # flush it out after 5 seconds of no incoming data
+    camel.beans.aggregate: "#class:org.apache.camel.kafkaconnector.aggregator.StringAggregator"
+    camel.aggregation.size: 750
+    camel.aggregation.interval: 5000
+
+    # topic to listen on
+    topics: {{ kafka_topic }}
+
+    # converters for parsing the data coming in from kafka
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: org.apache.kafka.connect.storage.StringConverter
+  tasksMax: 1

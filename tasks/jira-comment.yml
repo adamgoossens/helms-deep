@@ -1,0 +1,24 @@
+---
+- name: jsm - fetch issue
+  community.general.jira:
+    operation: fetch
+    issue: "{{ jsm_issue_id }}"
+  register: issue
+
+- name: jsm - transition
+  community.general.jira:
+    operation: transition
+    issue: "{{ jsm_issue_id }}"
+    status: "{{ transition }}"
+  loop: "{{ transitions|default([]) }}"
+  vars:
+    status: "{{ item.status }}"
+    transition: "{{ item.transition }}"
+  when:
+    - issue.meta.fields.status.name != status
+
+- name: jsm - comment
+  community.general.jira:
+    operation: comment
+    issue: "{{ jsm_issue_id }}"
+    comment: "{% if comment_template is defined %}{{ lookup('template', comment_template) }}{%else%}{{ comment }}{%endif%}"

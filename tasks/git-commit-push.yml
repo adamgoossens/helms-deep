@@ -1,0 +1,26 @@
+- set_fact:
+    git_cmd: "GIT_SSH_COMMAND='ssh -i {{ key_file }}' git"
+
+- name: scm - set git config
+  shell: "{{ git_cmd }} config {{ item }}"
+  args:
+    chdir: "{{ scm_dir }}"
+  loop:
+    - "user.name 'Ansible Automation Platform'"
+    - "user.email 'ansible@home.lab'"
+
+- name: scm - git add all changes
+  shell: "{{ git_cmd }} add -A"
+  args:
+    chdir: "{{ scm_dir }}"
+
+- name: scm - commit all changes
+  shell: "{{ git_cmd }} commit -m '{{ commit_message }}'"
+  args:
+    chdir: "{{ scm_dir }}"
+
+- name: scm - push all changes
+  shell: "{{ git_cmd }} push origin {{ scm_branch }}"
+  args:
+    chdir: "{{ scm_dir }}"
+

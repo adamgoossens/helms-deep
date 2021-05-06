@@ -1,0 +1,9 @@
+Hello,
+
+Deployment of your SOC has completed.
+
+A NiFi instance has been deployed at {{ nifi_url }}, and a template instantiated and enabled. A Kafka broker has been configured as the output of this NiFi instance.
+
+Incoming messages must be delivered as payload via HTTP POST to {{ nifi_ingest_url }}. No Content-Type is required; the body of the HTTP POST request will be taken as-is and processed.
+
+Thanks.
