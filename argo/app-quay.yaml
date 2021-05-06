@@ -11,7 +11,7 @@ spec:
     server: https://kubernetes.default.svc
   project: default
   source:
-    path: argocd/quay
+    path: argo/quay
     repoURL: git@github.com:adamgoossens/helms-deep.git
     targetRevision: main
   syncPolicy:
