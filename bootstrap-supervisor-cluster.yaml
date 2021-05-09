@@ -97,6 +97,13 @@
       include_tasks: tasks/bootstrap-sso.yaml
 
     #####
+    # Rollout Quay
+    #####
+    - tags:
+      - quay
+      include_tasks: tasks/bootstrap-quay.yaml
+
+    #####
     # Start MCH rollout now; it takes some time.
     #####
     - tags:

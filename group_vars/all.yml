@@ -4,6 +4,7 @@ namespaces:
   - { name: stackrox, displayName: "HELMS DEEP Advanced Cluster Security" }
   - { name: helms-deep-registry-dev, displayName: "HELMS DEEP Container Registry - Development" }
   - { name: helms-deep-registry-prod, displayName: "HELMS DEEP Container Registry - Production" }
+  - { name: openshift-storage, displayName: "HELMS DEEP OpenShift Container Storage" }
 
 singleNamespaceOperatorGroups:
   - namespace: open-cluster-management
@@ -11,6 +12,9 @@ singleNamespaceOperatorGroups:
 
   - namespace: helms-deep-sso
     name: helms-deep-sso-og
+
+  - namespace: openshift-storage
+    name: openshift-storage
 
 subscriptions:
   - name: rhsso-operator
@@ -32,3 +36,8 @@ subscriptions:
     namespace: openshift-operators
     channel: stable
     startingCSV: openshift-gitops-operator.v1.1.0
+
+  - name: ocs-operator
+    namespace: openshift-storage
+    channel: stable-4.6
+    startingCSV: ocs-operator.v4.6.4

@@ -1,0 +1,35 @@
+---
+- name: quay - deploy Noobaa
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: "{{ lookup('template', 'bootstrap-templates/noobaa.yaml') | from_yaml }}"
+
+- name: quay - wait for Noobaa to rollout (5 minutes)
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: noobaa.io/v1alpha1
+    kind: NooBaa
+    namespace: openshift-storage
+    name: noobaa
+  register: noobaa
+  until:
+    - noobaa.resources[0].status is defined
+    - noobaa.resources[0].status.phase | lower == 'ready'
+  delay: 15
+  retries: 20
+
+- name: quay - create QuayRegistry resources
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: "{{ lookup('template', 'bootstrap-templates/quayregistry.yaml.j2') | from_yaml }}"
+  vars:
+    namespace: "{{ item }}"
+  loop:
+    - helms-deep-registry-dev
+    - helms-deep-registry-prod
+
+- set_fact:
+    quay_outputs:
+      routes:
+        dev: ""
+        prod: ""
