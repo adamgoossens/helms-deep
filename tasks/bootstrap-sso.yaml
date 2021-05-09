@@ -1,0 +1,108 @@
+- name: sso - create Keycloak Resources
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: "{{ lookup('template', item) | from_yaml }}"
+  with_fileglob:
+    - bootstrap-templates/sso/keycloak-*.yaml
+
+- name: sso - wait for Keycloak to reconcile (5 minutes)
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: keycloak.org/v1alpha1
+    kind: Keycloak
+    namespace: helms-deep-sso
+    name: sso
+  register: kc
+  until:
+  - kc.resources|length > 0
+  - kc.resources[0].status is defined
+  - kc.resources[0].status.phase == 'reconciling'
+  retries: 10
+  delay: 30
+
+- name: sso - create KeycloakClient for the cluster
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: "{{ lookup('template', 'bootstrap-templates/sso/keycloakclient.yaml.j2') | from_yaml }}"
+
+- name: sso - wait for KeycloakClient to reconcile (5 minutes)
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: keycloak.org/v1alpha1
+    kind: KeycloakClient
+    namespace: helms-deep-sso
+    name: supervisor-cluster-client
+  register: client
+  until:
+  - client.resources|length > 0
+  - client.resources[0].status is defined
+  - client.resources[0].status.phase == 'reconciling'
+  retries: 10
+  delay: 30
+ 
+- name: sso - fetch cluster OAuth client secret
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: v1
+    kind: Secret
+    namespace: helms-deep-sso
+    name: "{{ client.resources[0].status.secondaryResources.Secret[0] }}"
+  register: client_secret
+
+- name: sso - create OAuth client secret in openshift-config namespace
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: 
+      kind: Secret
+      api_version: v1
+      metadata:
+        name: "helms-deep-sso-client-secret" 
+        namespace: openshift-config
+      data: 
+        clientSecret: "{{ client_secret.resources[0].data.CLIENT_SECRET }}"
+      type: Opaque
+
+- name: sso - TODO FIXME UGLY - configure cluster OAuth to HELMS DEEP SSO realm
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    merge_type: 'merge'
+    definition:
+      api_version: 'config.openshift.io/v1'
+      kind: OAuth
+      metadata:
+        name: cluster
+        namespace: openshift-config
+      spec:
+        identityProviders:
+        - htpasswd:
+            fileData:
+              name: htpasswd-secret
+          mappingMethod: claim
+          name: htpasswd_provider
+          type: HTPasswd
+        - name: "helms-deep-single-sign-on"
+          challenge: true
+          login: true
+          mappingMethod: claim
+          type: OpenID
+          openID:
+            clientID: "helms-deep-supervisor"
+            clientSecret:
+              name: "helms-deep-sso-client-secret"
+            extraScopes:
+            - email
+            - profile
+            extraAuthorizeParameters:
+              include_granted_scopes: "true"
+            claims:
+              preferredUsername:
+              - preferred_username
+              - email
+              name:
+              - nickname
+              - given_name
+              - name
+              email:
+              - custom_email_claim
+              - email
+            issuer: "{{ kc.resources[0].status.internalURL }}/auth/realms/helms-deep"

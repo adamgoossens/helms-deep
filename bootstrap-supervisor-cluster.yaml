@@ -30,13 +30,14 @@
       community.kubernetes.k8s_auth:
         username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
         password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
-      tags:
-        - k8s
       register: k8s_auth_results
+
+    - set_fact:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
 
     - name: get cluster DNS
       community.kubernetes.k8s_info:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+        api_key: "{{ api_key }}"
         api_version: config.openshift.io/v1
         kind: DNS
         namespace: openshift-config
@@ -46,233 +47,74 @@
     - set_fact:
         cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain }}"
 
-    - name: apply kubernetes resources - pre-argocd
+    - name: apply kubernetes resources - pre-deployment
       community.kubernetes.k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+        api_key: "{{ api_key }}"
         merge_type: 'merge'
         definition: "{{ lookup('file', item) | from_yaml }}"
       tags:
-        - k8s
-        - k8s-pre-resources
+        - early-resources
       with_fileglob:
-        - "bootstrap-templates/pre-argo-*.yaml"
+        - "bootstrap-templates/pre-deploy-*.yaml"
 
+    - name: create required namespaces
+      community.kubernetes.k8s:
+        api_key: "{{ api_key }}"
+        definition: "{{ lookup('template', 'bootstrap-templates/namespace.yaml.j2') }}"
+      loop_control: 
+        loop_var: ns
+      loop: "{{ namespaces }}"
+      tags:
+        - namespaces
+
+    - name: create single-namespace OperatorGroups
+      community.kubernetes.k8s:
+        api_key: "{{ api_key }}"
+        definition: "{{ lookup('template', 'bootstrap-templates/operatorgroup.yaml.j2') }}"
+      loop_control:
+        loop_var: og
+      loop: "{{ singleNamespaceOperatorGroups }}"
+      tags:
+        - operatorgroups
+        - olm
+
+    - name: create operator Subscriptions
+      community.kubernetes.k8s:
+        api_key: "{{ api_key }}"
+        definition: "{{ lookup('template', 'bootstrap-templates/subscription.yaml.j2') }}"
+      loop_control:
+        loop_var: sub
+      loop: "{{ subscriptions }}"
+      tags:
+        - subscriptions
+        - olm
+
+    #####
+    # Rollout Keycloak.
+    #####
     - tags:
-      - argocd
-      block:
-      - name: wait for argocd to rollout
-        community.kubernetes.k8s_info:
-          api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-          api_version: argoproj.io/v1alpha1
-          kind: ArgoCD
-          name: helms-deep
-          namespace: argocd
-        register: argocd
-        delay: 5
-        retries: 30
-        until:
-          - argocd.resources | length > 0
-          - argocd.resources[0].status is defined
-          - "argocd.resources[0].status.phase == 'Available'"
+      - sso
+      include_tasks: tasks/bootstrap-sso.yaml
 
-      - name: get route for argocd
-        community.kubernetes.k8s_info:
-          api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-          api_version: route.openshift.io/v1
-          kind: Route
-          name: helms-deep-server
-          namespace: argocd
-        register: argocd_server_route
+    #####
+    # Start MCH rollout now; it takes some time.
+    #####
+    - tags:
+      - acm
+      include_tasks: tasks/bootstrap-acm.yaml
 
-      - name: get argocd login secret
-        community.kubernetes.k8s_info:
-          api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-          api_version: v1
-          kind: Secret
-          name: helms-deep-cluster
-          namespace: argocd
-        register: argocd_auth_secret
+    ####
+    # Start ACS rollout now.
+    ####
+    - tags:
+      - acs
+      include_tasks: tasks/bootstrap-acs.yaml
+        
+    - set_fact:
+        output:
+          acs: "{{ acs_outputs|default('') }}"
+          sso: "{{ sso_outputs|default('') }}"
+          acm: "{{ acm_outputs|default('') }}"
+          quay: "{{ quay_outputs|default('') }}"
 
-      - name: get argocd login token
-        uri:
-          url: "https://{{ argocd_server_route.resources[0].spec.host }}/api/v1/session"
-          method: POST
-          body_format: json
-          body:
-            username: "admin"
-            password: "{{ argocd_auth_secret.resources[0].data['admin.password'] | b64decode }}"
-          validate_certs: false
-        register: auth_token_raw
-
-      - set_fact:
-          auth_token: "{{ auth_token_raw.json['token'] }}"
-
-      - name: get existing repository
-        uri:
-          url: "https://{{ argocd_server_route.resources[0].spec.host }}/api/v1/repositories"
-          method: GET
-          headers:
-            Cookie: "argocd.token={{ auth_token }}"
-          body_format: json
-          body:
-            repo: "git@github.com:adamgoossens/helms-deep.git"
-          validate_certs: false
-        register: repo
-        failed_when:
-          - repo.status not in [200, 404]
-
-      - when:
-        - repo.json['items'] == None
-        name: create repository
-        uri:
-          url: "https://{{ argocd_server_route.resources[0].spec.host }}/api/v1/repositories"
-          method: POST
-          headers:
-            Cookie: "argocd.token={{ auth_token }}"
-          body_format: json
-          body:
-            name: "devsecops-state"
-            repo: "git@github.com:adamgoossens/helms-deep.git"
-            sshPrivateKey: "{{ lookup('file', lookup('env', 'SSH_PRIVATE_KEY_FILE')) }}"
-            upsert: "true"
-          validate_certs: false
-        register: create_repo
-
-    - name: apply kubernetes resources - post-argocd
-      community.kubernetes.k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        merge_type: 'merge'
-        definition: "{{ lookup('file', item) | from_yaml }}"
-      tags:
-        - k8s
-        - k8s-post-resources
-      with_fileglob:
-        - "bootstrap-templates/post-argo-*.yaml"
-
-    - name: wait until Keycloak rolls out (5 minutes max)
-      community.kubernetes.k8s_info:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        api_version: keycloak.org/v1alpha1
-        kind: Keycloak
-        namespace: helms-deep-sso
-        name: sso
-      register: kc
-      until:
-      - kc.resources|length > 0
-      - kc.resources[0].status is defined
-      - kc.resources[0].status.phase == 'reconciling'
-      retries: 20
-      delay: 15
-
-    - name: create KeycloakClient for supervisor cluster
-      community.kubernetes.k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        definition: "{{ lookup('template', 'bootstrap-templates/cluster-sso-client.yaml.j2') | from_yaml }}"
-
-    - name: wait until KeycloakClient rolls out (5 minutes max)
-      community.kubernetes.k8s_info:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        api_version: keycloak.org/v1alpha1
-        kind: KeycloakClient
-        namespace: helms-deep-sso
-        name: supervisor-cluster-client
-      register: client
-      until:
-      - client.resources|length > 0
-      - client.resources[0].status is defined
-      - client.resources[0].status.phase == 'reconciling'
-      retries: 20
-      delay: 15
-
-    - name: fetch cluster OAuth client secret
-      community.kubernetes.k8s_info:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        api_version: v1
-        kind: Secret
-        namespace: helms-deep-sso
-        name: "{{ client.resources[0].status.secondaryResources.Secret[0] }}"
-      register: client_secret
-
-    - name: create secret in openshift-config namespace
-      community.kubernetes.k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        definition: 
-          kind: Secret
-          api_version: v1
-          metadata:
-            name: "helms-deep-sso-client-secret" 
-            namespace: openshift-config
-          data: 
-            clientSecret: "{{ client_secret.resources[0].data.CLIENT_SECRET }}"
-          type: Opaque
-
-    - name: get OAuth cluster config
-      community.kubernetes.k8s_info:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        api_version: config.openshift.io/v1
-        kind: OAuth
-        name: cluster
-      register: oauth
-
-    - name: TODO FIXME UGLY - configure cluster OAuth to HELMS DEEP SSO realm
-      community.kubernetes.k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        merge_type: 'merge'
-        definition:
-          api_version: 'config.openshift.io/v1'
-          kind: OAuth
-          metadata:
-            name: cluster
-            namespace: openshift-config
-          spec:
-            identityProviders:
-            - htpasswd:
-                fileData:
-                  name: htpasswd-secret
-              mappingMethod: claim
-              name: htpasswd_provider
-              type: HTPasswd
-            - name: "helms-deep-single-sign-on"
-              challenge: true
-              login: true
-              mappingMethod: claim
-              type: OpenID
-              openID:
-                clientID: "helms-deep-supervisor"
-                clientSecret:
-                  name: "helms-deep-sso-client-secret"
-                extraScopes:
-                - email
-                - profile
-                extraAuthorizeParameters:
-                  include_granted_scopes: "true"
-                claims:
-                  preferredUsername:
-                  - preferred_username
-                  - email
-                  name:
-                  - nickname
-                  - given_name
-                  - name
-                  email:
-                  - custom_email_claim
-                  - email
-                issuer: "{{ kc.resources[0].status.internalURL }}/auth/realms/helms-deep"
-
-    - name: wait until ACM rolls out as this is the longest component (15 minutes)
-      community.kubernetes.k8s_info:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        api_version: "operator.open-cluster-management.io/v1"
-        kind: "MultiClusterHub"
-        namespace: "open-cluster-management"
-        name: "multiclusterhub"
-      register: result
-      vars:
-        status_json: "conditions[?type=='Complete']"
-      until:
-      - result.resources | length > 0
-      - result.resources[0].status is defined
-      - "result.resources[0].status | json_query(status_json) | length == 1"
-      retries: 15
-      delay: 60
-
+    - debug: var=output

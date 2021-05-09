@@ -1,0 +1,14 @@
+---
+apiVersion: keycloak.org/v1alpha1
+kind: Keycloak
+metadata:
+  name: sso
+  labels:
+    app: sso
+  namespace: helms-deep-sso
+  annotations:
+    argocd.argoproj.io/sync-wave: "40"
+spec:
+  externalAccess:
+    enabled: true
+  instances: 1

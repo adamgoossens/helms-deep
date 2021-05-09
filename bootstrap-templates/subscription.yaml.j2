@@ -1,0 +1,13 @@
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: "{{ sub.name }}"
+  namespace: "{{ sub.namespace }}"
+spec:
+  channel: "{{ sub.channel }}"
+  installPlanApproval: "{{ sub.installPlanApproval|default('Automatic') }}"
+  name: "{{ sub.name }}"
+  source: "{{ sub.source | default('redhat-operators') }}"
+  sourceNamespace: "{{ sub.sourceNamespace | default('openshift-marketplace') }}"
+  startingCSV: "{{ sub.startingCSV }}"

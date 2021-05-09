@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sso-enable-custom-host-binding
+  namespace: helms-deep-sso
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sso-enable-custom-host
+subjects:
+- kind: ServiceAccount
+  namespace: helms-deep-sso
+  name: rhsso-operator

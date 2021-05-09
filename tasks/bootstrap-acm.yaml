@@ -1,0 +1,32 @@
+---
+- name: acm - create MultiClusterHub resource
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: "{{ lookup('file', 'bootstrap-templates/multiclusterhub.yaml') | from_yaml }}"
+
+- name: acm - wait for MultiClusterHub to rollout (15 minutes)
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: operator.open-cluster-management.io/v1
+    kind: MultiClusterHub
+    namespace: open-cluster-management
+    name: multiclusterhub
+  register: mch
+  until:
+  - mch.resources[0].status is defined
+  - mch.resources[0].status.phase == 'Running'
+  retries: 30
+  delay: 30
+
+- name: acm - fetch ACM route
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: open-cluster-management
+    name: multicloud-console
+  register: acm_route
+
+- set_fact:
+    acm_outputs:
+      acm_route: "https://{{ acm_route.resources[0].spec.host }}" 

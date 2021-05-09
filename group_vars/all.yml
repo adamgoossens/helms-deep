@@ -1,0 +1,34 @@
+namespaces:
+  - { name: helms-deep-sso, displayName: "HELMS DEEP Single Sign On" }
+  - { name: open-cluster-management, displayName: "HELMS DEEP Advanced Cluster Management" }
+  - { name: stackrox, displayName: "HELMS DEEP Advanced Cluster Security" }
+  - { name: helms-deep-registry-dev, displayName: "HELMS DEEP Container Registry - Development" }
+  - { name: helms-deep-registry-prod, displayName: "HELMS DEEP Container Registry - Production" }
+
+singleNamespaceOperatorGroups:
+  - namespace: open-cluster-management
+    name: helms-deep-acm-og
+
+  - namespace: helms-deep-sso
+    name: helms-deep-sso-og
+
+subscriptions:
+  - name: rhsso-operator
+    namespace: helms-deep-sso
+    channel: alpha
+    startingCSV: rhsso-operator.7.4.6
+
+  - name: advanced-cluster-management
+    namespace: open-cluster-management
+    channel: release-2.2
+    startingCSV: advanced-cluster-management.v2.2.3
+
+  - name: quay-operator
+    namespace: openshift-operators
+    channel: quay-v3.5
+    startingCSV: quay-operator.v3.5.1
+
+  - name: openshift-gitops-operator
+    namespace: openshift-operators
+    channel: stable
+    startingCSV: openshift-gitops-operator.v1.1.0

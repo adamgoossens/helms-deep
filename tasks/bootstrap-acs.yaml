@@ -1,0 +1,43 @@
+---
+- name: acs - deploy ACS Helm chart
+  community.kubernetes.helm:
+    name: stackrox-central-services
+    chart_ref: https://mirror.openshift.com/pub/rhacs/charts/stackrox-central-services-59.1.0.tgz
+    release_namespace: stackrox
+    release_values:
+      imagePullSecrets:
+        allowNone: true
+      central:
+        exposure:
+          route:
+            enabled: true
+    wait: true
+  register: acs_helm_out
+
+- name: acs - get list of generated secrets
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: v1
+    kind: Secret
+    namespace: stackrox
+  register: stackrox_secrets
+
+- name: acs - find secret prefixed with stackrox-generated-
+  set_fact:
+    acs_secret: "{{ (stackrox_secrets | to_json | from_json | json_query(query) | first)['data']['generated-values.yaml'] | b64decode | from_yaml }}"
+  vars:
+    query: "resources[?starts_with(metadata.name, 'stackrox-generated')]"
+
+- name: acs - get acs route
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: stackrox
+    name: central
+  register: central_route
+
+- set_fact:
+    acs_outputs:
+      acs_central_password: "{{ acs_secret.central.adminPassword.value }}"
+      acs_central_route: "https://{{ central_route.resources[0].spec.host }}"

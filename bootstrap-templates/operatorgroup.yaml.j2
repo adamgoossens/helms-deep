@@ -2,8 +2,8 @@
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
-  name: argocd-og
-  namespace: argocd
+  name: {{ og.name }}
+  namespace: {{ og.namespace }}
 spec:
   targetNamespaces:
-  - argocd
+    - {{ og.namespace }}

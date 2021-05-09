@@ -1,0 +1,20 @@
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakRealm
+metadata:
+  name: helms-deep-realm
+  namespace: helms-deep-sso
+  annotations:
+    argocd.argoproj.io/sync-wave: "50"
+  labels:
+    realm: helms-deep
+    app: sso
+spec:
+  instanceSelector:
+    matchLabels:
+      app: sso
+  realm:
+    enabled: true
+    displayName: HELMS DEEP
+    realm: "helms-deep"
+    id: 'helms-deep-realm'

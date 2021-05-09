@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ ns.name }}
+  annotations:
+     openshift.io/display-name: '{{ ns.displayName|default('') }}'
+spec: {}
