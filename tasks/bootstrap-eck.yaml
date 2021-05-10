@@ -1,0 +1,71 @@
+---
+- name: eck - start ElasticSearch deployment
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: "{{ lookup('template', 'bootstrap-templates/eck-elasticsearch.yaml') | from_yaml }}"
+
+- name: eck - start Kibana deployment
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: "{{ lookup('template', 'bootstrap-templates/eck-kibana.yaml') | from_yaml }}"
+  
+- name: eck - wait for Kibana and Elasticsearch (5 mins total)
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: "{{ item.api }}"
+    kind: "{{ item.kind }}"
+    namespace: helms-deep-elk
+    name: "{{ item.name }}"
+  register: eck_status
+  loop:
+    - { kind: "Elasticsearch", name: "elasticsearch", api: "elasticsearch.k8s.elastic.co/v1" }
+    - { kind: "Kibana", name: "kibana", api: "kibana.k8s.elastic.co/v1" }
+  until:
+    - eck_status.resources[0].status is defined
+    - eck_status.resources[0].status.health == 'green'
+  delay: 15
+  retries: 20
+
+- name: eck - expose Kibana and Elasticsearch as routes
+  community.kubernetes.k8s:
+    api_key: "{{ api_key }}"
+    definition: "{{ lookup('template', 'bootstrap-templates/eck-route.yaml.j2') | from_yaml }}"
+  vars:
+    name: "{{ item.name }}"
+    service: "{{ item.service }}"
+  loop:
+    - { name: "route-es", service: "elasticsearch-es-http" }
+    - { name: "route-kibana", service: "kibana-kb-http" }
+
+- name: eck - get Kibana route
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: "route.openshift.io/v1"
+    kind: "Route"
+    namespace: helms-deep-elk
+    name: "route-kibana"
+  register: route_kibana
+
+- name: eck - get Elasticsearch route
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: "route.openshift.io/v1"
+    kind: "Route"
+    namespace: helms-deep-elk
+    name: "route-es"
+  register: route_es
+
+- name: eck - get elastic user secret
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: "v1"
+    kind: "Secret"
+    namespace: "helms-deep-elk"
+    name: "elasticsearch-es-elastic-user"
+  register: elastic_user
+
+- set_fact:
+    eck_outputs:
+      es_route: "https://{{ route_es.resources[0].spec.host }}"
+      kibana_route: "https://{{ route_kibana.resources[0].spec.host }}"
+      elastic_pass: "{{ elastic_user.resources[0].data.elastic | b64decode }}"

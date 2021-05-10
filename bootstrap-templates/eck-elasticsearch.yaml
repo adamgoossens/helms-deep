@@ -1,0 +1,32 @@
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: helms-deep-elk
+spec:
+  auth: {}
+  http:
+    service:
+      metadata:
+        creationTimestamp: null
+      spec: {}
+    tls:
+      certificate: {}
+  nodeSets:
+    - config:
+        node.store.allow_mmap: false
+      count: 1
+      name: default
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                limits:
+                  cpu: '1'
+                  memory: 2560Mi
+                requests:
+                  cpu: 500m
+                  memory: 2560Mi
+  version: 7.12.0

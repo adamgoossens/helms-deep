@@ -26,26 +26,29 @@
       validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
 
   tasks:
-    - name: k8s - get kubernetes auth token
-      community.kubernetes.k8s_auth:
-        username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
-        password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
-      register: k8s_auth_results
+    - tags:
+      - k8s
+      block:
+      - name: k8s - get kubernetes auth token
+        community.kubernetes.k8s_auth:
+          username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
+          password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
+        register: k8s_auth_results
 
-    - set_fact:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+      - set_fact:
+          api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
 
-    - name: get cluster DNS
-      community.kubernetes.k8s_info:
-        api_key: "{{ api_key }}"
-        api_version: config.openshift.io/v1
-        kind: DNS
-        namespace: openshift-config
-        name: cluster
-      register: cluster_dns
+      - name: get cluster DNS
+        community.kubernetes.k8s_info:
+          api_key: "{{ api_key }}"
+          api_version: config.openshift.io/v1
+          kind: DNS
+          namespace: openshift-config
+          name: cluster
+        register: cluster_dns
 
-    - set_fact:
-        cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain }}"
+      - set_fact:
+          cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain }}"
 
     - name: apply kubernetes resources - pre-deployment
       community.kubernetes.k8s:
@@ -94,34 +97,47 @@
     #####
     - tags:
       - sso
-      include_tasks: tasks/bootstrap-sso.yaml
+      import_tasks: tasks/bootstrap-sso.yaml
 
     #####
     # Rollout Quay
     #####
     - tags:
       - quay
-      include_tasks: tasks/bootstrap-quay.yaml
+      import_tasks: tasks/bootstrap-quay.yaml
 
     #####
     # Start MCH rollout now; it takes some time.
     #####
     - tags:
       - acm
-      include_tasks: tasks/bootstrap-acm.yaml
+      import_tasks: tasks/bootstrap-acm.yaml
 
     ####
     # Start ACS rollout now.
     ####
     - tags:
       - acs
-      include_tasks: tasks/bootstrap-acs.yaml
-        
-    - set_fact:
+      import_tasks: tasks/bootstrap-acs.yaml
+
+    ####
+    # Start ECK cluster rollout.
+    ####
+    - tags:
+      - eck
+      import_tasks: tasks/bootstrap-eck.yaml
+
+    - tags:
+      - always
+      set_fact:
         output:
           acs: "{{ acs_outputs|default('') }}"
           sso: "{{ sso_outputs|default('') }}"
           acm: "{{ acm_outputs|default('') }}"
           quay: "{{ quay_outputs|default('') }}"
+          eck: "{{ eck_outputs|default('') }}"
 
-    - debug: var=output
+    - debug:
+        var: output
+      tags:
+      - always

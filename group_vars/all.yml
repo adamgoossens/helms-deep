@@ -4,6 +4,8 @@ namespaces:
   - { name: stackrox, displayName: "HELMS DEEP Advanced Cluster Security" }
   - { name: helms-deep-registry-prod, displayName: "HELMS DEEP Container Registry - Production" }
   - { name: openshift-storage, displayName: "HELMS DEEP OpenShift Container Storage" }
+  - { name: openshift-logging, displayName: "HELMS DEEP Supervisor Cluster Logging" }
+  - { name: helms-deep-elk, displayName: "HELMS DEEP Consolidated Logging Stack" }
 
 singleNamespaceOperatorGroups:
   - namespace: open-cluster-management
@@ -14,6 +16,12 @@ singleNamespaceOperatorGroups:
 
   - namespace: openshift-storage
     name: openshift-storage
+
+  - namespace: openshift-logging
+    name: openshift-logging-og
+
+  - namespace: helms-deep-elk
+    name: helms-deep-elk-og
 
 subscriptions:
   - name: rhsso-operator
@@ -40,3 +48,14 @@ subscriptions:
     namespace: openshift-storage
     channel: stable-4.6
     startingCSV: ocs-operator.v4.6.4
+
+  - name: cluster-logging
+    namespace: openshift-logging
+    channel: '5.0'
+    startingCSV: cluster-logging.5.0.3-6
+
+  - name: elasticsearch-eck-operator-certified
+    namespace: helms-deep-elk
+    source: certified-operators
+    channel: stable
+    startingCSV: elasticsearch-eck-operator-certified.v1.5.0
