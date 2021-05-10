@@ -1,4 +1,7 @@
 # HELMS DEEP
+
+Note: not *actually* using Helm...for now :)
+
 ## An integrated demonstration platform for OCP, ACM, ACS, Quay...
 
 HELMS DEEP is designed to take an RHPDS-deployed cluster and perform the following tasks:
@@ -28,4 +31,6 @@ To start, provision a RHPDS OCP 4.7 workshop cluster - or deploy your own, that 
 Once it's provisioned, run the `bootstrap-supervisor-cluster.yaml` playbook and provide the necessary environment variable inputs.
 
 Then sit tight and wait for completion!
+
+## TODO: Architectural Diagram.
 
