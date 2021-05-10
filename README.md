@@ -12,8 +12,8 @@ HELMS DEEP is designed to take an RHPDS-deployed cluster and perform the followi
 * Deploy RH SSO.
 * Configure Single Sign On realms and clients.
 * Configure the OCP cluster to authenticate to SSO.
+* Deploy a separate ELK stack to receive audit logs from satellite clusters and the supervisor cluster.
 * (Eventually) Add a number of users and groups to SSO for different personas, e.g. 'developer', 'infra admin', 'security admin', 'auditor'.
-* (Eventually) Deploy a separate ELK stack to receive audit logs from satellite clusters and the 
 * (Eventually) Configure log forwarding to push audit logs into the ELK stack.
 
 The goal is to establish an integrated environment, across Dev, Sec and Ops, that can be used as a demonstration and storytelling platform. Ideally we should be able to adopt any given persona (e.g. "infrastructure admin", "developer", "security auditor") and tell a story around that persona across the integrated technologies.
