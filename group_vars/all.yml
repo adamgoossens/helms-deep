@@ -2,7 +2,6 @@ namespaces:
   - { name: helms-deep-sso, displayName: "HELMS DEEP Single Sign On" }
   - { name: open-cluster-management, displayName: "HELMS DEEP Advanced Cluster Management" }
   - { name: stackrox, displayName: "HELMS DEEP Advanced Cluster Security" }
-  - { name: helms-deep-registry-dev, displayName: "HELMS DEEP Container Registry - Development" }
   - { name: helms-deep-registry-prod, displayName: "HELMS DEEP Container Registry - Production" }
   - { name: openshift-storage, displayName: "HELMS DEEP OpenShift Container Storage" }
 

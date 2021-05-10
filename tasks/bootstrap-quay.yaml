@@ -23,13 +23,33 @@
     api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/quayregistry.yaml.j2') | from_yaml }}"
   vars:
-    namespace: "{{ item }}"
-  loop:
-    - helms-deep-registry-dev
-    - helms-deep-registry-prod
+    namespace: "helms-deep-registry-prod"
+
+- name: quay - wait for QuayRegistry rollout (10 mins)
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: quay.redhat.com/v1
+    kind: QuayRegistry
+    namespace: helms-deep-registry-prod
+    name: registry
+  register: quayreg
+  vars:
+    query: "conditions[?type=='Available' && status=='True']"
+  until:
+    - quayreg.resources[0].status is defined
+    - quayreg.resources[0].status | json_query(query) | length > 0
+  delay: 30
+  retries: 20
+
+- name: quay - get route
+  community.kubernetes.k8s_info:
+    api_key: "{{ api_key }}"
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: registry-quay
+    namespace: helms-deep-registry-prod
+  register: quayroute
 
 - set_fact:
     quay_outputs:
-      routes:
-        dev: ""
-        prod: ""
+      quay_route: "https://{{ quayroute.resources[0].spec.host }}"
