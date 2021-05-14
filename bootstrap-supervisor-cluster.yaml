@@ -92,6 +92,22 @@
         - subscriptions
         - olm
 
+    - name: wait for all subscriptions to reach AtLatestKnown state
+      community.kubernetes.k8s_info:
+        api_key: "{{ api_key }}"
+        api_version: "operators.coreos.com/v1alpha1"
+        kind: Subscription
+        name: "{{ item.name }}"
+        namespace: "{{ item.namespace }}"
+      register: sub
+      until:
+        - sub.resources[0].status is defined
+        - sub.resources[0].status.state|lower == 'atlatestknown'
+      loop: "{{ subscriptions }}"
+      tags:
+        - subscriptions
+        - olm
+
     #####
     # Rollout Keycloak.
     #####
