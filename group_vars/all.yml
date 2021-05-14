@@ -6,6 +6,7 @@ namespaces:
   - { name: openshift-storage, displayName: "HELMS DEEP OpenShift Container Storage" }
   - { name: openshift-logging, displayName: "HELMS DEEP Supervisor Cluster Logging" }
   - { name: helms-deep-elk, displayName: "HELMS DEEP Consolidated Logging Stack" }
+  - { name: group-sync-operator, displayName: "HELMS DEEP Group Sync Operator" }
 
 singleNamespaceOperatorGroups:
   - namespace: open-cluster-management
@@ -22,6 +23,22 @@ singleNamespaceOperatorGroups:
 
   - namespace: helms-deep-elk
     name: helms-deep-elk-og
+
+  - namespace: group-sync-operator
+    name: group-sync-operator-og
+
+catalogSources:
+  - name: redhatgov-operators
+    displayName: Red Hat NAPS Community Operators
+    image: quay.io/redhatgov/operator-catalog:latest
+    publisher: RedHatGov
+    sourceType: grpc
+
+  - name: redhatcop-operators
+    displayName: Red Hat CoP Community Operators
+    image: quay.io/agoossen/redhatcop-operators-index:0.0.1
+    publisher: RedHatCoP
+    sourceType: grpc
 
 subscriptions:
   - name: rhsso-operator

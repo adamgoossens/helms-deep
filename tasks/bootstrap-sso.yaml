@@ -106,3 +106,10 @@
               - custom_email_claim
               - email
             issuer: "{{ kc.resources[0].status.internalURL }}/auth/realms/helms-deep"
+
+- set_fact:
+    sso_outputs:
+      url: "{{ kc.resources[0].status.internalURL }}"
+      credentials:
+        username: ""
+        password: ""

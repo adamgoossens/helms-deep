@@ -1,0 +1,11 @@
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: "{{ cs.name }}"
+  namespace: openshift-marketplace
+spec:
+  displayName: "{{ cs.displayName|default(cs.name) }}"
+  image: '{{ cs.image }}'
+  publisher: '{{ cs.publisher }}'
+  sourceType: '{{ cs.sourceType|default('grpc') }}'

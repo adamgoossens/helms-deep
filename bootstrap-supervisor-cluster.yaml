@@ -60,53 +60,12 @@
       with_fileglob:
         - "bootstrap-templates/pre-deploy-*.yaml"
 
-    - name: create required namespaces
-      community.kubernetes.k8s:
-        api_key: "{{ api_key }}"
-        definition: "{{ lookup('template', 'bootstrap-templates/namespace.yaml.j2') }}"
-      loop_control: 
-        loop_var: ns
-      loop: "{{ namespaces }}"
-      tags:
-        - namespaces
-
-    - name: create single-namespace OperatorGroups
-      community.kubernetes.k8s:
-        api_key: "{{ api_key }}"
-        definition: "{{ lookup('template', 'bootstrap-templates/operatorgroup.yaml.j2') }}"
-      loop_control:
-        loop_var: og
-      loop: "{{ singleNamespaceOperatorGroups }}"
-      tags:
-        - operatorgroups
-        - olm
-
-    - name: create operator Subscriptions
-      community.kubernetes.k8s:
-        api_key: "{{ api_key }}"
-        definition: "{{ lookup('template', 'bootstrap-templates/subscription.yaml.j2') }}"
-      loop_control:
-        loop_var: sub
-      loop: "{{ subscriptions }}"
-      tags:
-        - subscriptions
-        - olm
-
-    - name: wait for all subscriptions to reach AtLatestKnown state
-      community.kubernetes.k8s_info:
-        api_key: "{{ api_key }}"
-        api_version: "operators.coreos.com/v1alpha1"
-        kind: Subscription
-        name: "{{ item.name }}"
-        namespace: "{{ item.namespace }}"
-      register: sub
-      until:
-        - sub.resources[0].status is defined
-        - sub.resources[0].status.state | default('doesnotexist') | lower == 'atlatestknown'
-      loop: "{{ subscriptions }}"
-      tags:
-        - subscriptions
-        - olm
+    #####
+    # Rollout OLM
+    #####
+    - tags:
+      - olm
+      import_tasks: tasks/bootstrap-olm.yaml
 
     #####
     # Rollout Keycloak.
