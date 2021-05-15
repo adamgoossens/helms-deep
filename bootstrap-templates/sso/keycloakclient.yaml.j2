@@ -23,3 +23,33 @@ spec:
     rootUrl: 'https://console-openshift-console.apps.{{ cluster_basedomain }}/'
     protocol: openid-connect
     standardFlowEnabled: true
+    protocolMappers:
+      - protocol: openid-connect
+        name: username
+        protocolMapper: oidc-usermodel-property-mapper
+        config:
+          "userinfo.token.claim": 'true'
+          "user.attribute": 'username'
+          "id.token.claim": 'true'
+          "access.token.claim": 'true'
+          "claim.name": 'preferred_username'
+          "jsonType.label": "String"
+        consentRequired: false
+      - protocol: openid-connect
+        protocolMapper: 'oidc-full-name-mapper'
+        name: 'full name'
+        consentRequired: false
+        config:
+          "userinfo.token.claim": 'true'
+          "id.token.claim": 'true'
+          "access.token.claim": 'true'
+      - protocol: openid-connect
+        protocolMapper: 'oidc-usermodel-property-mapper'
+        consentRequired: false
+        config:
+          "userinfo.token.claim": 'true'
+          "user.attribute": 'email'
+          "id.token.claim": 'true'
+          "access.token.claim": 'true'
+          "claim.name": 'email'
+          "jsonType.label": "String"

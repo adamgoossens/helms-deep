@@ -76,3 +76,29 @@ subscriptions:
     source: certified-operators
     channel: stable
     startingCSV: elasticsearch-eck-operator-certified.v1.5.0
+
+  - name: group-sync-operator
+    namespace: group-sync-operator
+    source: redhatcop-operators
+    channel: alpha
+    startingCSV: group-sync-operator.v0.0.13
+
+ssoUsers:
+  - { firstName: 'Jesse', lastName: 'Pinkman (Operations)', username: 'jpinkman' }
+  - { firstName: 'Alex', lastName: 'Brown (Developer)', username: 'abrown' }
+  - { firstName: 'Jane', lastName: 'Frank (Developer)', username: 'jfrank' }
+  - { firstName: 'Sam', lastName: 'Kelley (Security Auditor)', username: 'skelley' }
+  - { firstName: 'Kerry', lastName: 'Craig (Admin)', username: 'kcraig-a' }
+
+ssoGroups:
+  - name: supervisor-cluster-admins
+    members:
+      - kcraig-a
+
+  - name: security-auditors
+    members:
+      - skelley
+
+  - name: cluster-operations
+    members:
+      - jpinkman

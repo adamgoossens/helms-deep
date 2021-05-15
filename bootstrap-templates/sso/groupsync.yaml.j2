@@ -1,0 +1,17 @@
+---
+apiVersion: redhatcop.redhat.io/v1alpha1
+kind: GroupSync
+metadata:
+  name: keycloak-groupsync
+  namespace: group-sync-operator
+spec:
+  providers:
+    - keycloak:
+        credentialsSecret:
+          name: helms-deep-group-sync-credentials
+          namespace: group-sync-operator
+        loginRealm: master
+        realm: helms-deep
+        scope: sub
+        url: "{{ keycloak_url }}"
+      name: keycloak

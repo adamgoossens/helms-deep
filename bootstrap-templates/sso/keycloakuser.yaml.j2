@@ -1,0 +1,24 @@
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakUser
+metadata:
+  name: "{{ user.username }}"
+  labels:
+    app: sso
+  namespace: helms-deep-sso
+spec:
+  realmSelector:
+    matchLabels:
+      app: sso
+      realm: helms-deep
+  user:
+    lastName: "{{ user.lastName }}"
+    enabled: true
+    emailVerified: true
+    username: "{{ user.username }}"
+    firstName: "{{ user.firstName }}"
+    email: "{{ user.username }}@helms.deep"
+    credentials:
+    - type: password
+      value: '1800redhat'
+
