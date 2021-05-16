@@ -92,6 +92,8 @@ ssoUsers:
 
 ssoGroups:
   - name: supervisor-cluster-admins
+    clusterRoles:
+      - cluster-admin
     members:
       - kcraig-a
 
@@ -102,3 +104,10 @@ ssoGroups:
   - name: cluster-operations
     members:
       - jpinkman
+
+clusterRoleBindings:
+  - groups:
+      - supervisor-cluster-admins
+    role: cluster-admin
+
+roleBindings: []

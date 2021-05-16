@@ -1,0 +1,28 @@
+{% if isClusterRoleBinding|default(False) %}
+{% set kind="ClusterRole" %}
+{% else %}
+{% set kind="Role" %}
+{% endif %}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: {{ kind }}Binding
+metadata:
+  name: {{ rb.role }}-{{kind|lower}}-binding
+{% if not isClusterRoleBinding|default(False) %}
+  namespace: {{ rb.namespace }}
+{% endif %}
+subjects:
+{% for subject in rb.groups|default([]) %}
+- kind: Group
+  name: {{ subject }}
+  apiGroup: rbac.authorization.k8s.io
+{% endfor %}
+{% for subject in rb.users|default([]) %}
+- kind: User
+  name: {{ subject }}
+  apiGroup: rbac.authorization.k8s.io
+{% endfor %}
+roleRef:
+  kind: {{ kind }}
+  name: {{ rb.role }}
+  apiGroup: rbac.authorization.k8s.io

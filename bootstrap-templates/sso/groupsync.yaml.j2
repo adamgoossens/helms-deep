@@ -5,6 +5,8 @@ metadata:
   name: keycloak-groupsync
   namespace: group-sync-operator
 spec:
+  # sync every 15 minutes
+  schedule: '0/15 * * * *'
   providers:
     - keycloak:
         credentialsSecret:
