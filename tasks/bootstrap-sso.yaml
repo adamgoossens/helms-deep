@@ -101,7 +101,7 @@
           access.token.claim: True
 
       - protocolMapper: oidc-usermodel-property-mapper
-        name: email
+        name: 'email'
         protocol: openid-connect
         config:
           userinfo.token.claim: True
