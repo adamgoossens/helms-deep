@@ -1,6 +1,5 @@
 - name: olm - create required namespaces
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/namespace.yaml.j2') }}"
   loop_control: 
     loop_var: ns
@@ -8,7 +7,6 @@
 
 - name: olm - create single-namespace OperatorGroups
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/operatorgroup.yaml.j2') | from_yaml }}"
   loop_control:
     loop_var: og
@@ -16,7 +14,6 @@
 
 - name: olm - create CatalogSources
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/catalogsource.yaml.j2') | from_yaml }}"
   loop_control:
     loop_var: cs
@@ -24,7 +21,6 @@
 
 - name: olm - wait for CatalogSources to reach READY
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
     api_version: "operators.coreos.com/v1alpha1"
     kind: CatalogSource
     name: "{{ item.name }}"
@@ -40,7 +36,6 @@
 
 - name: olm - create operator Subscriptions
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/subscription.yaml.j2') }}"
   loop_control:
     loop_var: sub
@@ -48,7 +43,6 @@
 
 - name: olm - wait for all subscriptions to reach AtLatestKnown state
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
     api_version: "operators.coreos.com/v1alpha1"
     kind: Subscription
     name: "{{ item.name }}"

@@ -12,25 +12,14 @@
 - hosts: localhost
   connection: local
   gather_facts: false
-  module_defaults:
-    community.kubernetes.k8s_auth:
-      host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
-      validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS')) | bool }}"
-
-    community.kubernetes.k8s_info:
-      host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
-      validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
-
-    community.kubernetes.k8s:
-      host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
-      validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
-
   tasks:
     - tags:
       - k8s
       block:
       - name: k8s - get kubernetes auth token
         community.kubernetes.k8s_auth:
+          host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+          validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS')) | bool }}"
           username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
           password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
         register: k8s_auth_results
@@ -38,9 +27,33 @@
       - set_fact:
           api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
 
+      - name: k8s - tempfile for kubeconfig
+        tempfile:
+          state: file
+        register: kubeconfig
+
+      - name: k8s - generate local kubeconfig
+        template:
+          src: "bootstrap-templates/kubeconfig.j2"
+          dest: "{{ kubeconfig.path }}"
+        vars:
+          api_url: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+          api_username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
+          api_token: "{{ api_key }}"
+
+    #######################
+    # Start main block
+    #######################
+    - module_defaults:
+        community.kubernetes.k8s_info:
+          kubeconfig: "{{ kubeconfig.path }}"
+        community.kubernetes.k8s:
+          kubeconfig: "{{ kubeconfig.path }}"
+        community.kubernetes.helm:
+          kubeconfig: "{{ kubeconfig.path }}"
+      block:
       - name: get cluster DNS
         community.kubernetes.k8s_info:
-          api_key: "{{ api_key }}"
           api_version: config.openshift.io/v1
           kind: DNS
           namespace: openshift-config
@@ -50,76 +63,75 @@
       - set_fact:
           cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain }}"
 
-    - name: apply kubernetes resources - pre-deployment
-      community.kubernetes.k8s:
-        api_key: "{{ api_key }}"
-        merge_type: 'merge'
-        definition: "{{ lookup('file', item) | from_yaml }}"
-      tags:
-        - early-resources
-      with_fileglob:
-        - "bootstrap-templates/pre-deploy-*.yaml"
+      - name: apply kubernetes resources - pre-deployment
+        community.kubernetes.k8s:
+          merge_type: 'merge'
+          definition: "{{ lookup('file', item) | from_yaml }}"
+        tags:
+          - early-resources
+        with_fileglob:
+          - "bootstrap-templates/pre-deploy-*.yaml"
 
-    #####
-    # Rollout OLM
-    #####
-    - tags:
-      - olm
-      import_tasks: tasks/bootstrap-olm.yaml
+      #####
+      # Rollout OLM
+      #####
+      - tags:
+        - olm
+        import_tasks: tasks/bootstrap-olm.yaml
 
-    #####
-    # Rollout Keycloak.
-    #####
-    - tags:
-      - sso
-      import_tasks: tasks/bootstrap-sso.yaml
+      #####
+      # Rollout Keycloak.
+      #####
+      - tags:
+        - sso
+        import_tasks: tasks/bootstrap-sso.yaml
 
-    #####
-    # Configure RBAC
-    ####
-    - tags:
-      - rbac
-      import_tasks: tasks/bootstrap-rbac.yaml
+      #####
+      # Configure RBAC
+      ####
+      - tags:
+        - rbac
+        import_tasks: tasks/bootstrap-rbac.yaml
 
-    #####
-    # Rollout Quay
-    #####
-    - tags:
-      - quay
-      import_tasks: tasks/bootstrap-quay.yaml
+      #####
+      # Rollout Quay
+      #####
+      - tags:
+        - quay
+        import_tasks: tasks/bootstrap-quay.yaml
 
-    #####
-    # Start MCH rollout now; it takes some time.
-    #####
-    - tags:
-      - acm
-      import_tasks: tasks/bootstrap-acm.yaml
+      #####
+      # Start MCH rollout now; it takes some time.
+      #####
+      - tags:
+        - acm
+        import_tasks: tasks/bootstrap-acm.yaml
 
-    ####
-    # Start ACS rollout now.
-    ####
-    - tags:
-      - acs
-      import_tasks: tasks/bootstrap-acs.yaml
+      ####
+      # Start ACS rollout now.
+      ####
+      - tags:
+        - acs
+        import_tasks: tasks/bootstrap-acs.yaml
 
-    ####
-    # Start ECK cluster rollout.
-    ####
-    - tags:
-      - eck
-      import_tasks: tasks/bootstrap-eck.yaml
+      ####
+      # Start ECK cluster rollout.
+      ####
+      - tags:
+        - eck
+        import_tasks: tasks/bootstrap-eck.yaml
 
-    - tags:
-      - always
-      set_fact:
-        output:
-          acs: "{{ acs_outputs|default('') }}"
-          sso: "{{ sso_outputs|default('') }}"
-          acm: "{{ acm_outputs|default('') }}"
-          quay: "{{ quay_outputs|default('') }}"
-          eck: "{{ eck_outputs|default('') }}"
+      - tags:
+        - always
+        set_fact:
+          output:
+            acs: "{{ acs_outputs|default('') }}"
+            sso: "{{ sso_outputs|default('') }}"
+            acm: "{{ acm_outputs|default('') }}"
+            quay: "{{ quay_outputs|default('') }}"
+            eck: "{{ eck_outputs|default('') }}"
 
-    - debug:
-        var: output
-      tags:
-      - always
+      - debug:
+          var: output
+        tags:
+        - always

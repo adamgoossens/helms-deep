@@ -1,7 +1,6 @@
 ---
 - name: rbac - create ClusterRoleBindings
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/rolebinding.yaml.j2') | from_yaml }}"
   vars:
     isClusterRoleBinding: true
@@ -11,7 +10,6 @@
 
 - name: rbac - create RoleBindings
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/rolebinding.yaml.j2') | from_yaml }}"
   loop: "{{ roleBindings }}"
   loop_control:

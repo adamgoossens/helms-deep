@@ -1,17 +1,14 @@
 ---
 - name: eck - start ElasticSearch deployment
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/eck-elasticsearch.yaml') | from_yaml }}"
 
 - name: eck - start Kibana deployment
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/eck-kibana.yaml') | from_yaml }}"
   
 - name: eck - wait for Kibana and Elasticsearch (5 mins total)
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
     api_version: "{{ item.api }}"
     kind: "{{ item.kind }}"
     namespace: helms-deep-elk
@@ -28,7 +25,6 @@
 
 - name: eck - expose Kibana and Elasticsearch as routes
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/eck-route.yaml.j2') | from_yaml }}"
   vars:
     name: "{{ item.name }}"
@@ -39,7 +35,6 @@
 
 - name: eck - get Kibana route
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
     api_version: "route.openshift.io/v1"
     kind: "Route"
     namespace: helms-deep-elk
@@ -48,7 +43,6 @@
 
 - name: eck - get Elasticsearch route
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
     api_version: "route.openshift.io/v1"
     kind: "Route"
     namespace: helms-deep-elk
@@ -57,7 +51,6 @@
 
 - name: eck - get elastic user secret
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
     api_version: "v1"
     kind: "Secret"
     namespace: "helms-deep-elk"

@@ -1,12 +1,10 @@
 ---
 - name: quay - deploy Noobaa
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/noobaa.yaml') | from_yaml }}"
 
 - name: quay - wait for Noobaa to rollout (5 minutes)
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
     api_version: noobaa.io/v1alpha1
     kind: NooBaa
     namespace: openshift-storage
@@ -20,12 +18,10 @@
 
 - name: quay - deploy Noobaa Backing Store
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/noobaa-backing-store.yaml') | from_yaml }}"
 
 - name: quay - patch backing store
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition:
       apiVersion: noobaa.io/v1alpha1
       kind: BucketClass
@@ -40,15 +36,12 @@
 
 - name: quay - create QuayRegistry resources
   community.kubernetes.k8s:
-    api_key: "{{ api_key }}"
     definition: "{{ lookup('template', 'bootstrap-templates/quayregistry.yaml.j2') | from_yaml }}"
   vars:
     namespace: "helms-deep-registry-prod"
 
 - name: quay - wait for QuayRegistry rollout (20 mins)
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
-    api_version: quay.redhat.com/v1
     kind: QuayRegistry
     namespace: helms-deep-registry-prod
     name: registry
@@ -63,7 +56,6 @@
 
 - name: quay - get route
   community.kubernetes.k8s_info:
-    api_key: "{{ api_key }}"
     api_version: route.openshift.io/v1
     kind: Route
     name: registry-quay
