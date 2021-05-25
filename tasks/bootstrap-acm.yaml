@@ -23,6 +23,45 @@
     name: multicloud-console
   register: acm_route
 
+- name: acm - tempfile for keypairs
+  tempfile:
+    state: file
+  register: keypair
+
+- name: acm - check if cluster keypair already exists
+  community.kubernetes.k8s_info:
+    kind: Secret
+    name: core-user-ssh-private-key
+    namespace: helms-deep-satellite-clusters
+  register: keypair_secret
+
+- when:
+  - keypair_secret.resources | length == 0
+  block:
+  - name: acm - generate public/private keypair for satellite clusters
+    community.crypto.openssh_keypair:
+      regenerate: always
+      path: "{{ keypair.path }}"
+
+  - set_fact:
+      acm_public_keyfile: "{{ keypair.path }}.pub"
+      acm_private_keyfile: "{{ keypair.path }}"
+
+  - name: acm - create secret for keypair
+    community.kubernetes.k8s:
+      definition: "{{ lookup('template', 'bootstrap-templates/acm/secret-ssh-key.yaml.j2') | from_yaml }}"
+    vars:
+      ssh_private_key: "{{ lookup('file', acm_private_keyfile ) }}"
+      ssh_public_key: "{{ lookup('file', acm_public_keyfile ) }}"
+
+- name: acm - generate required secrets (skip SSH key)
+  community.kubernetes.k8s:
+    definition: "{{ lookup('template', item) | from_yaml }}"
+  when:
+    - "not 'ssh-key' in item"
+  with_fileglob:
+    - bootstrap-templates/acm/secret-*.yaml.j2
+
 - set_fact:
     acm_outputs:
       acm_route: "https://{{ acm_route.resources[0].spec.host }}" 
