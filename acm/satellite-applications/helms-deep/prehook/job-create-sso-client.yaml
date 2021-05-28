@@ -2,7 +2,7 @@
 apiVersion: tower.ansible.com/v1alpha1
 kind: AnsibleJob
 metadata:
-  generateName: sso-client-job
+  generateName: sso-client-job-
   namespace: helms-deep-satellite-clusters
 spec:
   tower_auth_secret: ansible-automation-platform
