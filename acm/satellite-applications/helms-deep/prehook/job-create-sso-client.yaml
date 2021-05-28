@@ -1,0 +1,10 @@
+---
+apiVersion: tower.ansible.com/v1alpha1
+kind: AnsibleJob
+metadata:
+  generateName: sso-client-job
+  namespace: helms-deep-satellite-clusters
+spec:
+  tower_auth_secret: toweraccess
+  job_template_name: helms-deep-cluster-prehook-configure-sso-client
+  extra_vars: {}
