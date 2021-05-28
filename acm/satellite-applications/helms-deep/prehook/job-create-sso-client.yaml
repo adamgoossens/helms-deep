@@ -5,6 +5,6 @@ metadata:
   generateName: sso-client-job
   namespace: helms-deep-satellite-clusters
 spec:
-  tower_auth_secret: toweraccess
+  tower_auth_secret: ansible-automation-platform
   job_template_name: helms-deep-cluster-prehook-configure-sso-client
   extra_vars: {}
