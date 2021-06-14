@@ -1,0 +1,97 @@
+---
+- name: acs - deploy ACS Helm chart
+  community.kubernetes.helm:
+    name: stackrox-central-services
+    chart_ref: '{{ acs.central.chart_ref }}'
+    release_namespace: stackrox
+    release_values: "{{ acs.central.helmValues }}"
+    wait: true
+  register: acs_helm_out
+
+- name: acs - get central route
+  community.kubernetes.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: stackrox
+    name: central
+  register: central_route
+
+- name: acs - check if init bundle secret exists
+  community.kubernetes.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: helms-deep
+    name: acs-init-bundle
+  register: ib_secret
+
+- when:
+    - (ib_secret.resources | length > 0)
+  set_fact:
+    helm_ib_data: "{{ ib_secret.resources[0].data.helm | b64decode | from_yaml }}"
+
+- when:
+    - (ib_secret.resources | length == 0)
+  block:
+    - name: acs - get list of generated secrets
+      community.kubernetes.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: stackrox
+      register: all_stackrox_secrets
+
+    - set_fact:
+        stackrox_secret: "{{ all_stackrox_secrets | to_json | from_json | json_query(query) | first }}"
+      vars:
+        query: "resources[?starts_with(metadata.name, 'stackrox-generated')]"
+
+    - set_fact:
+        stackrox_admin_credential: "{{ (stackrox_secret.data['generated-values.yaml'] | b64decode | from_yaml).central.adminPassword.value }}"
+
+    - name: acs - generate init bundle
+      uri:
+        url: "https://{{ central_route.resources[0].spec.host }}/v1/cluster-init/init-bundles"
+        force_basic_auth: true
+        url_password: "{{ stackrox_admin_credential }}"
+        url_username: "admin"
+        method: POST
+        validate_certs: false
+        body:
+          name: init-bundle
+        body_format: json
+      register: init_bundle_api_result
+
+    - set_fact:
+        bundle_data: "{{ init_bundle_api_result.json }}"
+
+    - name: acs - store init bundle
+      community.kubernetes.k8s:
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            namespace: helms-deep
+            name: acs-init-bundle
+          stringData:
+            expiry: "{{ bundle_data.meta.expiresAt }}"
+          data:
+            helm: "{{ bundle_data.helmValuesBundle }}"
+            kubectl: "{{ bundle_data.kubectlBundle }}"
+      register: new_bundle
+
+    - set_fact:
+        helm_ib_data: "{{ bundle_data.helmValuesBundle | b64decode | from_yaml }}"
+
+- set_fact:
+    helm_values:
+      centralEndpoint: "{{ central_route.resources[0].spec.host }}:443"
+      clusterName: "central"
+      imagePullSecrets:
+        allowNone: true
+
+- name: acs - deploy or remove ACS collector services on this cluster
+  community.kubernetes.helm:
+    name: stackrox-secured-cluster-services
+    chart_ref: "{{ acs.collector.chart_ref }}"
+    release_namespace: stackrox
+    release_values: "{{ helm_ib_data | combine(acs.collector.helmValues|default({})) | combine(helm_values) }}"
+    wait: true

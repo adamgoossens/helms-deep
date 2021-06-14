@@ -1,40 +1,42 @@
+ansible_tower_url: https://aap.adamgoossens.com
+
+acs:
+  central:
+    helmValues:
+      imagePullSecrets:
+        allowNone: true
+      central:
+        exposure:
+          route:
+            enabled: true
+    chart_ref: 'https://mirror.openshift.com/pub/rhacs/charts/stackrox-central-services-61.0.0.tgz'
+  collector:
+    helmValues: {}
+    chart_ref: 'https://mirror.openshift.com/pub/rhacs/charts/stackrox-secured-cluster-services-61.0.0.tgz'
+
+acm:
+  gitopsRepoUrl: 'https://github.com/adamgoossens/helms-deep-resources.git'
+
+sso:
+  groupsToCreate:
+    - auditors
+    - container-platform-admins
+    - developers
+
+  usersToCreate: []
+
+rbac:
+
 namespaces:
-  - { name: helms-deep-sso, displayName: "HELMS DEEP Single Sign On" }
+  - { name: helms-deep, displayName: "HELMS DEEP" }
   - { name: open-cluster-management, displayName: "HELMS DEEP Advanced Cluster Management" }
-  - { name: stackrox, displayName: "HELMS DEEP Advanced Cluster Security" }
-  - { name: helms-deep-registry-prod, displayName: "HELMS DEEP Container Registry - Production" }
-  - { name: openshift-storage, displayName: "HELMS DEEP OpenShift Container Storage" }
-  - { name: openshift-logging, displayName: "HELMS DEEP Supervisor Cluster Logging" }
-  - { name: helms-deep-elk, displayName: "HELMS DEEP Consolidated Logging Stack" }
-  - { name: group-sync-operator, displayName: "HELMS DEEP Group Sync Operator" }
-  - { name: helms-deep-satellite-clusters, displayName: "Resources for HELMS DEEP Satellite clusters" }
-
-singleNamespaceOperatorGroups:
-  - namespace: open-cluster-management
-    name: helms-deep-acm-og
-
-  - namespace: helms-deep-sso
-    name: helms-deep-sso-og
-
-  - namespace: openshift-storage
-    name: openshift-storage
-
-  - namespace: openshift-logging
-    name: openshift-logging-og
-
-  - namespace: helms-deep-elk
-    name: helms-deep-elk-og
-
-  - namespace: group-sync-operator
-    name: group-sync-operator-og
+  - { name: stackrox, displayName: "HELMS DEEP Advanced Cluster Security", createOperatorGroup: false }
+  - { name: helms-deep-sso, displayName: "HELMS DEEP Single Sign On" }
+  - { name: helms-deep-registry-prod, displayName: "HELMS DEEP Production Registry" }
+  - { name: helms-deep-eck, displayName: "HELMS DEEP ECK Cluster" }
+  - { name: openshift-storage, displayName: "HELMS DEEP Storage" }
 
 catalogSources:
-  - name: redhatgov-operators
-    displayName: Red Hat NAPS Community Operators
-    image: quay.io/redhatgov/operator-catalog:latest
-    publisher: RedHatGov
-    sourceType: grpc
-
   - name: redhatcop-operators
     displayName: Red Hat CoP Community Operators
     image: quay.io/agoossen/redhatcop-operators-index:0.0.1
@@ -42,73 +44,23 @@ catalogSources:
     sourceType: grpc
 
 subscriptions:
-  - name: rhsso-operator
-    namespace: helms-deep-sso
-    channel: alpha
-    startingCSV: rhsso-operator.7.4.6
-
   - name: advanced-cluster-management
     namespace: open-cluster-management
     channel: release-2.2
-    startingCSV: advanced-cluster-management.v2.2.3
-
-  - name: quay-operator
-    namespace: openshift-operators
-    channel: quay-v3.5
-    startingCSV: quay-operator.v3.5.1
-
-  - name: openshift-gitops-operator
-    namespace: openshift-operators
-    channel: stable
-    startingCSV: openshift-gitops-operator.v1.1.0
-
-  - name: ocs-operator
-    namespace: openshift-storage
-    channel: stable-4.6
-    startingCSV: ocs-operator.v4.6.4
-
-  - name: cluster-logging
-    namespace: openshift-logging
-    channel: '5.0'
-    startingCSV: cluster-logging.5.0.3-6
-
-  - name: elasticsearch-eck-operator-certified
-    namespace: helms-deep-elk
-    source: certified-operators
-    channel: stable
-    startingCSV: elasticsearch-eck-operator-certified.v1.5.0
 
   - name: group-sync-operator
-    namespace: group-sync-operator
+    namespace: helms-deep-sso
     source: redhatcop-operators
     channel: alpha
-    startingCSV: group-sync-operator.v0.0.13
 
-ssoUsers:
-  - { firstName: 'Jesse', lastName: 'Pinkman (Operations)', username: 'jpinkman' }
-  - { firstName: 'Alex', lastName: 'Brown (Developer)', username: 'abrown' }
-  - { firstName: 'Jane', lastName: 'Frank (Developer)', username: 'jfrank' }
-  - { firstName: 'Sam', lastName: 'Kelley (Security Auditor)', username: 'skelley' }
-  - { firstName: 'Kerry', lastName: 'Craig (Admin)', username: 'kcraig-a' }
+  - name: ocs-operator
+    channel: stable-4.6
+    namespace: openshift-storage
 
-ssoGroups:
-  - name: supervisor-cluster-admins
-    clusterRoles:
-      - cluster-admin
-    members:
-      - kcraig-a
+  - name: quay-operator
+    channel: quay-v3.5
+    namespace: openshift-operators
 
-  - name: security-auditors
-    members:
-      - skelley
-
-  - name: cluster-operations
-    members:
-      - jpinkman
-
-clusterRoleBindings:
-  - groups:
-      - supervisor-cluster-admins
-    role: cluster-admin
-
-roleBindings: []
+  - name: rhsso-operator
+    channel: alpha
+    namespace: helms-deep-sso

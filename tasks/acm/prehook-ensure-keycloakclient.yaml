@@ -1,0 +1,18 @@
+---
+- name: "get cluster DNS from satellite cluster {{ cluster_name }}"
+  community.kubernetes.k8s_info:
+    host: "{{ cluster_secret['server'] }}"
+    api_key: "{{ cluster_secret['token'] }}"
+    validate_certs: "{{ not cluster_secret['insecure'] }}"
+    api_version: config.openshift.io/v1
+    kind: DNS
+    namespace: openshift-config
+    name: cluster
+  register: cluster_dns
+  
+- include_tasks: "tasks/sso/create-client-and-secret.yaml"
+  vars:
+    client_name: "{{ cluster_name }}-cluster"
+    cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain }}"
+
+- debug: var=client_secret

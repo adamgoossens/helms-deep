@@ -1,0 +1,76 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: helms-deep-resources-ns
+spec: {}
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  name: helms-deep-resources
+  namespace: helms-deep-resources-ns
+spec:
+  pathname: '{{ acm.gitopsRepoUrl }}'
+  type: Git
+---
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  namespace: helms-deep
+  name: local-cluster-resources
+  annotations: {}
+spec:
+  componentKinds:
+    - group: apps.open-cluster-management.io
+      kind: Subscription
+  descriptor: {}
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - local-cluster-resources
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  annotations:
+    apps.open-cluster-management.io/git-branch: main
+    apps.open-cluster-management.io/git-path: managed-subscriptions/
+    apps.open-cluster-management.io/reconcile-option: merge
+  labels:
+    app: root-subscription
+  name: root-subscription
+  namespace: helms-deep
+spec:
+  channel: helms-deep-resources-ns/helms-deep-resources
+  placement:
+    placementRef:
+      kind: PlacementRule
+      name: local-cluster
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  labels:
+    app: root-subscription
+  name: local-cluster
+  namespace: helms-deep
+spec:
+  matchExpressions:
+    - key: local-cluster
+      operator: Exists
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  labels:
+    app: root-subscription
+  name: non-local-clusters
+  namespace: helms-deep
+spec:
+  matchExpressions:
+    - key: local-cluster
+      operator: NotExists
+

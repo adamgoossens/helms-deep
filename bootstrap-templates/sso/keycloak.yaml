@@ -1,0 +1,56 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sso-enable-custom-host
+  namespace: helms-deep-sso
+rules:
+- apiGroups:
+    - route.openshift.io
+  resources:
+    - routes/custom-host
+  verbs:
+    - create
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sso-enable-custom-host-binding
+  namespace: helms-deep-sso
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sso-enable-custom-host
+subjects:
+- kind: ServiceAccount
+  namespace: helms-deep-sso
+  name: rhsso-operator
+---
+apiVersion: keycloak.org/v1alpha1
+kind: Keycloak
+metadata:
+  name: sso
+  labels:
+    app: sso
+  namespace: helms-deep-sso
+spec:
+  externalAccess:
+    enabled: true
+  instances: 1
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakRealm
+metadata:
+  name: helms-deep-realm
+  namespace: helms-deep-sso
+  labels:
+    realm: helms-deep
+    app: sso
+spec:
+  instanceSelector:
+    matchLabels:
+      app: sso
+  realm:
+    enabled: true
+    displayName: HELMS DEEP
+    realm: "helms-deep"
+    id: 'helms-deep-realm'

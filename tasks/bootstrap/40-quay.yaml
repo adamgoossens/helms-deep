@@ -1,0 +1,100 @@
+---
+- name: quay - create resources for Quay
+  community.kubernetes.k8s:
+    definition: "{{ lookup('template', 'bootstrap-templates/quay/quay.yaml.j2') }}"
+
+- name: quay - wait for QuayRegistry to rollout (up to 20 minutes)
+  community.kubernetes.k8s_info:
+    api_version: quay.redhat.com/v1
+    kind: QuayRegistry
+    namespace: helms-deep-registry-prod
+    name: registry
+  register: registry
+  vars:
+    query: "conditions[?type=='Available' && status=='True']"
+  delay: 30
+  retries: 40
+  until:
+    - registry.resources[0].status is defined
+    - registry.resources[0].status | json_query(query) | length > 0
+
+- name: quay - create KeycloakClient for Quay
+  community.kubernetes.k8s:
+    definition: "{{ lookup('template', 'templates/sso/keycloakclient.yaml.j2') }}"
+  vars:
+    clientName: quay-enterprise
+    rootUrl: "{{ registry.resources[0].status.registryEndpoint }}"
+    validRedirectURIs:
+      - "{{ registry.resources[0].status.registryEndpoint }}/oauth2/rhsso/callback"
+
+- name: quay - wait for KeycloakClient to reconcile
+  community.kubernetes.k8s_info:
+    api_version: keycloak.org/v1alpha1
+    kind: KeycloakClient
+    name: quay-enterprise
+    namespace: helms-deep-sso
+  register: kc
+  delay: 10
+  retries: 10
+  until:
+    - kc.resources[0].status is defined
+    - kc.resources[0].status.phase == 'reconciling'
+
+- name: quay - lookup client secret
+  community.kubernetes.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ kc.resources[0].status.secondaryResources.Secret[0] }}"
+    namespace: helms-deep-sso
+  register: client_secret
+
+- name: quay - fetch quay config secret
+  community.kubernetes.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ registry.resources[0].spec.configBundleSecret }}"
+    namespace: helms-deep-registry-prod
+  register: config_secret
+
+- set_fact:
+    existing_config: "{{ config_secret.resources[0].data['config.yaml'] | b64decode | from_yaml }}"
+    rhsso_config: "{{ lookup('template', 'bootstrap-templates/quay/quay-rhsso.yaml.j2') | from_yaml }}"
+
+- set_fact:
+    final_config: "{{ existing_config | combine(rhsso_config) }}"
+
+- name: quay - create new config block
+  community.kubernetes.k8s:
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ config_secret.resources[0].metadata.name }}"
+        namespace: helms-deep-registry-prod
+      data:
+        'config.yaml': "{{ final_config | to_nice_yaml | b64encode }}"
+  register: config_secret
+
+- when:
+    - config_secret.changed
+  block:
+    - name: quay - find quay pods
+      community.kubernetes.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: helms-deep-registry-prod
+        label_selectors:
+          - "quay-component=quay-app"
+      register: quay_pods
+
+    - name: quay - kill all quay pods to force rollout
+      community.kubernetes.k8s:
+        api_version: v1
+        kind: Pod
+        namespace: helms-deep-registry-prod
+        name: "{{ pod.metadata.name }}"
+        state: absent
+      loop_control:
+        loop_var: pod
+        label: "{{ pod.metadata.name }}"
+      loop: "{{ quay_pods.resources }}"

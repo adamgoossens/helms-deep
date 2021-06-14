@@ -1,45 +1,15 @@
-#
-# Take a new OpenTLC cluster and prepare it for a REDSORD demo.
-#
-# It will:
-#   - Strip out the LimitRange from the default project template.
-#   - Create the argocd namespace
-#   - Install the community argocd operator
-#   - Create a new ClusterRoleBinding for the argocd-application-server SA
-#     that gives it cluster-admin (naughty, naughty).
-#   - Create a new ArgoCD resource to start the server.
-#
 - hosts: localhost
   connection: local
   gather_facts: false
   tasks:
-    - tags:
+    - import_tasks: tasks/k8s-auth.yaml
+      vars:
+        host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+        validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+        username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
+        password: "{{ lookup('env', 'OPENSHIFT_API_PASSWORD') }}"
+      tags:
       - k8s
-      block:
-      - name: k8s - get kubernetes auth token
-        community.kubernetes.k8s_auth:
-          host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
-          validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS')) | bool }}"
-          username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
-          password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
-        register: k8s_auth_results
-
-      - set_fact:
-          api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-
-      - name: k8s - tempfile for kubeconfig
-        tempfile:
-          state: file
-        register: kubeconfig
-
-      - name: k8s - generate local kubeconfig
-        template:
-          src: "bootstrap-templates/kubeconfig.j2"
-          dest: "{{ kubeconfig.path }}"
-        vars:
-          api_url: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
-          api_username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
-          api_token: "{{ api_key }}"
 
     #######################
     # Start main block
@@ -75,63 +45,21 @@
       #####
       # Rollout OLM
       #####
-      - tags:
-        - olm
-        import_tasks: tasks/bootstrap-olm.yaml
-
-      #####
-      # Rollout Keycloak.
-      #####
-      - tags:
-        - sso
-        import_tasks: tasks/bootstrap-sso.yaml
-
-      #####
-      # Configure RBAC
-      ####
-      - tags:
-        - rbac
-        import_tasks: tasks/bootstrap-rbac.yaml
-
-      #####
-      # Rollout Quay
-      #####
-      - tags:
-        - quay
-        import_tasks: tasks/bootstrap-quay.yaml
+      - include_tasks: "{{ item }}"
+        loop: "{{ query('fileglob','tasks/bootstrap/*.yaml') | sort }}"
 
       #####
       # Start MCH rollout now; it takes some time.
+      #
+      # ACM will roll out the rest of the resources.
       #####
-      - tags:
-        - acm
-        import_tasks: tasks/bootstrap-acm.yaml
-
-      ####
-      # Start ACS rollout now.
-      ####
-      - tags:
-        - acs
-        import_tasks: tasks/bootstrap-acs.yaml
-
-      ####
-      # Start ECK cluster rollout.
-      ####
-      - tags:
-        - eck
-        import_tasks: tasks/bootstrap-eck.yaml
-
-      - tags:
-        - always
-        set_fact:
-          output:
-            acs: "{{ acs_outputs|default('') }}"
-            sso: "{{ sso_outputs|default('') }}"
-            acm: "{{ acm_outputs|default('') }}"
-            quay: "{{ quay_outputs|default('') }}"
-            eck: "{{ eck_outputs|default('') }}"
-
-      - debug:
-          var: output
-        tags:
-        - always
+#      - tags:
+#        - acm
+#        import_tasks: tasks/bootstrap/bootstrap-acm.yaml
+#
+#      ####
+#      # Start ACS rollout now.
+#      ####
+#      - tags:
+#        - acs
+#        import_tasks: tasks/bootstrap/bootstrap-acs.yaml

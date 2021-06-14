@@ -3,7 +3,7 @@ apiVersion: redhatcop.redhat.io/v1alpha1
 kind: GroupSync
 metadata:
   name: keycloak-groupsync
-  namespace: group-sync-operator
+  namespace: helms-deep-sso
 spec:
   # sync every 15 minutes
   schedule: '0/15 * * * *'
@@ -11,7 +11,7 @@ spec:
     - keycloak:
         credentialsSecret:
           name: helms-deep-group-sync-credentials
-          namespace: group-sync-operator
+          namespace: helms-deep-sso
         loginRealm: master
         realm: helms-deep
         scope: sub

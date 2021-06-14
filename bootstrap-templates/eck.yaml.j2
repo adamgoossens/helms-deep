@@ -1,0 +1,86 @@
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: helms-deep-eck
+spec:
+  auth: {}
+  http:
+    service:
+      metadata:
+        creationTimestamp: null
+      spec: {}
+    tls:
+      selfSignedCertificate:
+        disabled: true
+  nodeSets:
+    - config:
+        node.store.allow_mmap: false
+      count: 1
+      name: default
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                limits:
+                  cpu: '1'
+                  memory: 2560Mi
+                requests:
+                  cpu: 500m
+                  memory: 2560Mi
+  version: 7.12.0
+---
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: kibana
+  namespace: helms-deep-eck
+spec:
+  count: 1
+  elasticsearchRef:
+    name: elasticsearch
+  version: 7.12.0
+  podTemplate:
+    spec:
+      containers:
+        - name: kibana
+          resources:
+            requests:
+              memory: 1Gi
+              cpu: 0.5
+            limits:
+              memory: 2Gi
+              cpu: 2
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: "elasticsearch-route"
+  namespace: helms-deep-eck
+spec:
+  to:
+    kind: Service
+    name: "elasticsearch-es-http"
+    weight: 100
+  port:
+    targetPort: http
+  wildcardPolicy: None
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: "kibana-route"
+  namespace: helms-deep-eck
+spec:
+  to:
+    kind: Service
+    name: "kibana-kb-http"
+    weight: 100
+  port:
+    targetPort: https
+  tls:
+    termination: reencrypt
+    insecureEdgeTerminationPolicy: None
+  wildcardPolicy: None

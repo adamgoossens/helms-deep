@@ -1,0 +1,16 @@
+- name: sso - create GroupSync keycloak secret
+  community.kubernetes.k8s:
+    definition: 
+      kind: Secret
+      api_version: v1
+      metadata:
+        name: "helms-deep-group-sync-credentials" 
+        namespace: helms-deep
+      data:
+        username: "{{ kc_admin_credential.resources[0].data.ADMIN_USERNAME }}"
+        password: "{{ kc_admin_credential.resources[0].data.ADMIN_PASSWORD }}"
+      type: Opaque
+
+- name: sso - deploy GroupSync resource
+  community.kubernetes.k8s:
+    definition: "{{ lookup('template', 'bootstrap-templates/sso/groupsync.yaml.j2') | from_yaml }}"

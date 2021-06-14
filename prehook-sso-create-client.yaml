@@ -1,6 +1,65 @@
 ---
+##################################
+#
+# Given a list of cluster names in the extra var 'target_namespaces',
+# iterate over each and ensure there's a KeycloakClient resource for
+# each.
+#
+##################################
 - hosts: localhost
   gather_facts: false
   connection: local
   tasks:
-    - debug: msg="This is where we would create a new SSO Client ID"
+    - import_tasks: tasks/k8s-auth.yaml
+      vars:
+        host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+        validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+        username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
+        password: "{{ lookup('env', 'OPENSHIFT_API_PASSWORD') }}"
+      tags:
+      - k8s
+
+    ########
+    # Start main block
+    ########
+    - module_defaults:
+        community.kubernetes.k8s_info:
+          kubeconfig: "{{ kubeconfig.path }}"
+        community.kubernetes.k8s:
+          kubeconfig: "{{ kubeconfig.path }}"
+        community.kubernetes.helm:
+          kubeconfig: "{{ kubeconfig.path }}"
+      block:
+      - name: prehook - fetch secrets for all clusters
+        community.kubernetes.k8s_info:
+          api_version: v1
+          kind: Secret
+          name: "{{ name }}-cluster-secret"
+          namespace: "{{ name }}"
+        vars:
+          name: "{{ item }}"
+        register: secrets
+        loop: "{{ target_clusters }}"
+
+      - set_fact:
+          cluster_secrets: "{{ cluster_secrets | default({}) | combine(cluster | items2dict) }}"
+        vars:
+          secret: "{{item}}-cluster-secret"
+          query: "results[*].resources[?metadata.name=='{{secret}}'] | [0] | [0]"
+          target_secret: "{{ (secrets | json_query(query)) }}"
+          cluster_config: "{{ target_secret['data']['config'] | b64decode | from_yaml }}"
+          cluster_server: "{{ target_secret['data']['server'] | b64decode }}"
+          cluster:
+            - key: "{{ item }}"
+              value:
+                token: "{{ cluster_config['bearerToken'] }}"
+                server: "{{ cluster_server }}"
+                insecure: "{{ cluster_config['tlsClientConfig']['insecure'] | bool }}"
+        loop: "{{ target_clusters }}"
+
+      - include_tasks: tasks/acm/prehook-ensure-keycloakclient.yaml
+        vars:
+          cluster_secret: "{{ cluster_secrets[item] }}"
+          cluster_name: "{{ item }}"
+          cluster_namespace: "{{ item }}"
+        loop: "{{ target_clusters }}"

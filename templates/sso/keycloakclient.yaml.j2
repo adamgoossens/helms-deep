@@ -1,0 +1,54 @@
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: "{{ clientName }}"
+  namespace: helms-deep-sso
+  labels:
+    app: sso
+spec:
+  realmSelector:
+    matchLabels:
+      realm: helms-deep
+      app: sso
+  client:
+    clientId: {{ clientName }}
+    name: "{{ clientName }}"
+    enabled: true
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    redirectUris:
+      {{ validRedirectURIs | to_nice_yaml(indent=6) }}
+    rootUrl: '{{ rootUrl }}'
+    protocol: openid-connect
+    standardFlowEnabled: true
+    protocolMappers:
+      - config:
+          access.token.claim: 'true'
+          claim.name: preferred_username
+          id.token.claim: 'true'
+          jsonType.label: String
+          user.attribute: username
+          userinfo.token.claim: 'true'
+        consentRequired: false
+        name: 'username'
+        protocol: openid-connect
+        protocolMapper: oidc-usermodel-property-mapper
+      - config:
+          access.token.claim: 'true'
+          id.token.claim: 'true'
+          userinfo.token.claim: 'true'
+        consentRequired: false
+        name: 'full name'
+        protocol: openid-connect
+        protocolMapper: oidc-full-name-mapper
+      - config:
+          access.token.claim: 'true'
+          claim.name: email
+          id.token.claim: 'true'
+          jsonType.label: String
+          user.attribute: email
+          userinfo.token.claim: 'true'
+        consentRequired: false
+        protocol: openid-connect
+        protocolMapper: oidc-usermodel-property-mapper
+        name: 'email'

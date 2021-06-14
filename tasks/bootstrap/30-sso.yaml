@@ -1,0 +1,28 @@
+---
+- name: sso - create Keycloak resources
+  community.kubernetes.k8s:
+    definition: "{{ lookup('template', 'bootstrap-templates/sso/keycloak.yaml') | from_yaml_all | list }}"
+
+- name: sso - wait for Keycloak to reconcile (up to 5 min)
+  community.kubernetes.k8s_info:
+    api_version: keycloak.org/v1alpha1
+    kind: Keycloak
+    namespace: helms-deep-sso
+    name: sso
+  register: keycloak
+  until:
+    - keycloak.resources[0].status is defined
+    - keycloak.resources[0].status.phase == 'reconciling'
+  retries: 10
+  delay: 30
+
+- set_fact:
+    keycloak_url: "{{ keycloak.resources[0].status.internalURL }}"
+
+- name: sso - fetch Keycloak admin credential secret
+  community.kubernetes.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: credential-sso
+    namespace: helms-deep-sso
+  register: kc_admin_credential
