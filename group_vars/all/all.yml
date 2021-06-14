@@ -44,6 +44,10 @@ catalogSources:
     sourceType: grpc
 
 subscriptions:
+  - name: awx-resource-operator
+    namespace: helms-deep
+    channel: release-0.1
+
   - name: advanced-cluster-management
     namespace: open-cluster-management
     channel: release-2.2
