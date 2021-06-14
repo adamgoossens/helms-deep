@@ -10,9 +10,16 @@
     name: cluster
   register: cluster_dns
   
+- set_fact:
+		sat_cluster_basedomain: "{{ cluster_dns.resources[0].spec.baseDomain }}"
+
 - include_tasks: "tasks/sso/create-client-and-secret.yaml"
   vars:
-    client_name: "{{ cluster_name }}-cluster"
-    cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain }}"
+    clientName: "{{ cluster_name }}-cluster"
+    rootUrk: 'https://console-openshift-console.apps.{{ sat_cluster_basedomain }}'
+    validRedirectURIs:
+      - 'https://console-openshift-console.apps.{{ sat_cluster_basedomain }}/*'
+      - 'https://api.{{ sat_cluster_basedomain }}/*'
+      - 'https://oauth-openshift.apps.{{ sat_cluster_basedomain }}/*'
 
 - debug: var=client_secret
