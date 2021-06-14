@@ -58,9 +58,10 @@ metadata:
   name: local-cluster
   namespace: helms-deep
 spec:
-  matchExpressions:
-    - key: local-cluster
-      operator: Exists
+  clusterSelector:
+    matchExpressions:
+      - key: local-cluster
+        operator: Exists
 ---
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
@@ -70,6 +71,7 @@ metadata:
   name: non-local-clusters
   namespace: helms-deep
 spec:
-  matchExpressions:
-    - key: local-cluster
-      operator: NotExists
+  clusterSelector:
+    matchExpressions:
+      - key: local-cluster
+        operator: NotExists
