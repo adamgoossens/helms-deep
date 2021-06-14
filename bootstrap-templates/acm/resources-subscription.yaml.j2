@@ -10,6 +10,8 @@ kind: Channel
 metadata:
   name: helms-deep-resources
   namespace: helms-deep-resources-ns
+  annotations:
+    apps.open-cluster-management.io/reconcile-rate: high
 spec:
   pathname: '{{ acm.gitopsRepoUrl }}'
   type: Git
