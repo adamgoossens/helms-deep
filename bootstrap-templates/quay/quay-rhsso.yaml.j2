@@ -1,0 +1,7 @@
+RHSSO_LOGIN_CONFIG:
+  CLIENT_ID: "quay-enterprise"
+  CLIENT_SECRET: "{{ client_secret.resources[0].data.CLIENT_SECRET | b64decode }}"
+  LOGIN_SCOPES:
+    - openid
+  OIDC_SERVER: "{{ keycloak_url }}/auth/realms/helms-deep/"
+  SERVICE_NAME: HELMS DEEP SSO

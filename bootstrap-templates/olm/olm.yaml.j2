@@ -1,0 +1,36 @@
+{% for ns in namespaces %}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: "{{ ns.name }}"
+  annotations:
+    openshift.io/display-name: "{{ ns.displayName|default('') }}"
+spec: {}
+{% endfor %}
+{% for ns in namespaces %}
+{% if ns.createOperatorGroup|default(True) %}
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: "{{ ns.name }}-og"
+  namespace: "{{ ns.name }}"
+spec:
+  targetNamespaces:
+    - "{{ ns.name }}"
+{% endif %}
+{% endfor %}
+{% for cs in catalogSources %}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: "{{ cs.name }}"
+  namespace: "{{ cs.namespace|default('openshift-marketplace') }}"
+spec:
+  displayName: "{{ cs.displayName|default(item.name) }}"
+  image: "{{ cs.image }}"
+  publisher: "{{ cs.publisher }}"
+  sourceType: "{{ cs.sourceType|default('grpc') }}"
+{% endfor %}
