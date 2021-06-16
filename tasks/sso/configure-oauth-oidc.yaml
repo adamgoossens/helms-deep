@@ -1,0 +1,63 @@
+- name: sso - create OAuth client secret in openshift-config namespace
+  community.kubernetes.k8s:
+    definition:
+      kind: Secret
+      api_version: v1
+      metadata:
+        name: "helms-deep-sso-client-secret"
+        namespace: openshift-config
+      data:
+        clientSecret: "{{ clientSecret | b64encode }}"
+      type: Opaque
+
+- name: sso - get existing OAuth configuration
+  community.kubernetes.k8s_info:
+    api_version: 'config.openshift.io/v1'
+    kind: OAuth
+    name: cluster
+    namespace: openshift-config
+  register: oauth_raw
+
+- name: sso - get list of existing IDPs
+  set_fact:
+    existing_idp_names: "{{ oauth_raw.resources[0].spec.identityProviders | default([]) | map(attribute='name') | list }}"
+
+- when:
+    - "'helms-deep-single-sign-on' not in existing_idp_names"
+  block:
+    - name: sso - merge updated OAuth configuration
+      set_fact:
+        oauth: "{{ oauth_raw.resources[0] | combine(oidc) }}"
+      vars:
+        original_idps: "{{ oauth_raw.resources[0].spec.identityProviders|default([]) }}"
+        new_idp:
+          name: "helms-deep-single-sign-on"
+          challenge: true
+          login: true
+          mappingMethod: claim
+          type: OpenID
+          openID:
+            clientID: "{{ clientId }}"
+            clientSecret:
+              name: "helms-deep-sso-client-secret"
+            extraScopes:
+              - email
+              - profile
+            extraAuthorizeParameters:
+              include_granted_scopes: "true"
+            claims:
+              preferredUsername:
+                - preferred_username
+              name:
+                - name
+              email:
+                - email
+            issuer: "{{ keycloakUrl }}/auth/realms/helms-deep"
+        oidc:
+          spec:
+            identityProviders: "{{ original_idps | union([new_idp]) }}"
+
+    - name: sso - submit updated OAuth
+      community.kubernetes.k8s:
+        merge_type: 'merge'
+        definition: "{{ oauth }}"

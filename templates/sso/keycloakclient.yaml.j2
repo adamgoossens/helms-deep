@@ -16,8 +16,7 @@ spec:
     enabled: true
     clientAuthenticatorType: client-secret
     publicClient: false
-    redirectUris:
-      {{ validRedirectURIs | to_nice_yaml(indent=6) }}
+    redirectUris: {{ validRedirectURIs | to_yaml }}
     rootUrl: '{{ rootUrl }}'
     protocol: openid-connect
     standardFlowEnabled: true

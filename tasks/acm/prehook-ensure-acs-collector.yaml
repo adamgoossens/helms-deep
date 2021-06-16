@@ -1,0 +1,49 @@
+---
+- name: fetch acs central route
+  community.kubernetes.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: stackrox
+    name: central
+  register: central_route
+  
+- name: fetch acs init bundle
+  community.kubernetes.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: helms-deep
+    name: acs-init-bundle
+  register: ib_secret
+
+- set_fact:
+    helm_values:
+      centralEndpoint: "{{ central_route.resources[0].spec.host }}:443"
+      clusterName: "{{ cluster_name }}"
+      imagePullSecrets:
+        allowNone: true
+    helm_ib_data: "{{ ib_secret.resources[0].data.helm | b64decode | from_yaml }}"
+
+- name: ensure stackrox namespace exists
+  community.kubernetes.k8s:
+    kubeconfig: ""
+    api_key: "{{ cluster_secret['token'] }}"
+    host: "{{ cluster_secret['server'] }}"
+    validate_certs: "{{ not cluster_secret['insecure'] }}"
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "stackrox"
+
+- name: deploy ACS collector services
+  community.kubernetes.helm:
+    kubeconfig: ""
+    api_key: "{{ cluster_secret['token'] }}"
+    host: "{{ cluster_secret['server'] }}"
+    validate_certs: "{{ not cluster_secret['insecure'] }}"
+
+    name: stackrox-secured-cluster-services
+    chart_ref: "{{ acs.collector.chart_ref }}"
+    release_namespace: stackrox
+    release_values: "{{ helm_ib_data | combine(helm_values) | combine(acs.collector.helmValues|default({})) }}"
+    wait: true

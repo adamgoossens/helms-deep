@@ -1,4 +1,12 @@
 ---
+- name: fetch Keycloak resource
+  community.kubernetes.k8s_info:
+    api_version: keycloak.org/v1alpha1
+    kind: Keycloak
+    name: sso
+    namespace: helms-deep-sso
+  register: keycloak
+
 - name: "get cluster DNS from satellite cluster {{ cluster_name }}"
   community.kubernetes.k8s_info:
     host: "{{ cluster_secret['server'] }}"
@@ -9,17 +17,33 @@
     namespace: openshift-config
     name: cluster
   register: cluster_dns
-  
+
 - set_fact:
-		sat_cluster_basedomain: "{{ cluster_dns.resources[0].spec.baseDomain }}"
+    sat_cluster_basedomain: "{{ cluster_dns.resources[0].spec.baseDomain }}"
 
 - include_tasks: "tasks/sso/create-client-and-secret.yaml"
   vars:
     clientName: "{{ cluster_name }}-cluster"
-    rootUrk: 'https://console-openshift-console.apps.{{ sat_cluster_basedomain }}'
+    rootUrl: 'https://console-openshift-console.apps.{{ sat_cluster_basedomain }}'
     validRedirectURIs:
       - 'https://console-openshift-console.apps.{{ sat_cluster_basedomain }}/*'
       - 'https://api.{{ sat_cluster_basedomain }}/*'
       - 'https://oauth-openshift.apps.{{ sat_cluster_basedomain }}/*'
 
-- debug: var=client_secret
+- module_defaults:
+    community.kubernetes.k8s:
+      kubeconfig: ""
+      api_key: "{{ cluster_secret['token'] }}"
+      host: "{{ cluster_secret['server'] }}"
+      validate_certs: "{{ not cluster_secret['insecure'] }}"
+    community.kubernetes.k8s_info:
+      kubeconfig: ""
+      api_key: "{{ cluster_secret['token'] }}"
+      host: "{{ cluster_secret['server'] }}"
+      validate_certs: "{{ not cluster_secret['insecure'] }}"
+  block:
+    - include_tasks: "tasks/sso/configure-oauth-oidc.yaml"
+      vars:
+        clientId: "{{ cluster_name }}-cluster"
+        clientSecret: "{{ client_secret.resources[0].data.CLIENT_SECRET | b64decode }}"
+        keycloakUrl: "{{ keycloak.resources[0].status.internalURL }}"

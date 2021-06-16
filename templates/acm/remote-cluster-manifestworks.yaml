@@ -1,0 +1,22 @@
+---
+apiVersion: work.open-cluster-management.io/v1
+kind: ManifestWork
+metadata:
+  name: {{ _cluster_name }}-single-sign-on
+  namespace: "{{ _cluster_ns }}"
+spec:
+  workload:
+    manifests:
+      - apiVersion: v1
+        kind: Secret
+        metadata:
+          name: helms-deep-sso-client-secret
+          namespace: openshift-config
+        data:
+          clientSecret: "{{ clientSecret }}"
+---
+apiVersion: work.open-cluster-management.io/v1
+kind: ManifestWork
+metadata:
+  name: {{ _cluster_name }}-single-sign-on
+  namespace: "{{ _cluster_ns }}"

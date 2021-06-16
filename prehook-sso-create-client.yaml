@@ -30,7 +30,7 @@
         community.kubernetes.helm:
           kubeconfig: "{{ kubeconfig.path }}"
       block:
-      - name: prehook - fetch secrets for all clusters
+      - name: prehook - fetch secrets for all clusters (up to 20 min wait)
         community.kubernetes.k8s_info:
           api_version: v1
           kind: Secret
@@ -40,6 +40,10 @@
           name: "{{ item }}"
         register: secrets
         loop: "{{ target_clusters }}"
+        until:
+          - secrets.resources|length == 1
+        delay: 30
+        retries: 20
 
       - set_fact:
           cluster_secrets: "{{ cluster_secrets | default({}) | combine(cluster | items2dict) }}"
@@ -58,6 +62,13 @@
         loop: "{{ target_clusters }}"
 
       - include_tasks: tasks/acm/prehook-ensure-keycloakclient.yaml
+        vars:
+          cluster_secret: "{{ cluster_secrets[item] }}"
+          cluster_name: "{{ item }}"
+          cluster_namespace: "{{ item }}"
+        loop: "{{ target_clusters }}"
+
+      - include_tasks: tasks/acm/prehook-ensure-acs-collector.yaml
         vars:
           cluster_secret: "{{ cluster_secrets[item] }}"
           cluster_name: "{{ item }}"
