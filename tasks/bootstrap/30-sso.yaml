@@ -26,3 +26,14 @@
     name: credential-sso
     namespace: helms-deep-sso
   register: kc_admin_credential
+
+- set_fact:
+    console_links: "{{ console_links|default([]) + [sso_link] }}"
+  vars:
+    sso_link:
+      name: sso
+      applicationMenu:
+        section: Red Hat Applications
+      href: "{{ keycloak_url }}"
+      location: ApplicationMenu
+      text: Red Hat Single Sign On

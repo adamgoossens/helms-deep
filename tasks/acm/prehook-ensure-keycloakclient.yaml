@@ -9,9 +9,7 @@
 
 - name: "get cluster DNS from satellite cluster {{ cluster_name }}"
   community.kubernetes.k8s_info:
-    host: "{{ cluster_secret['server'] }}"
-    api_key: "{{ cluster_secret['token'] }}"
-    validate_certs: "{{ not cluster_secret['insecure'] }}"
+    kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
     api_version: config.openshift.io/v1
     kind: DNS
     namespace: openshift-config
@@ -20,6 +18,8 @@
 
 - set_fact:
     sat_cluster_basedomain: "{{ cluster_dns.resources[0].spec.baseDomain }}"
+
+- debug: var=kubeconfig
 
 - include_tasks: "tasks/sso/create-client-and-secret.yaml"
   vars:
@@ -32,15 +32,9 @@
 
 - module_defaults:
     community.kubernetes.k8s:
-      kubeconfig: ""
-      api_key: "{{ cluster_secret['token'] }}"
-      host: "{{ cluster_secret['server'] }}"
-      validate_certs: "{{ not cluster_secret['insecure'] }}"
+      kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
     community.kubernetes.k8s_info:
-      kubeconfig: ""
-      api_key: "{{ cluster_secret['token'] }}"
-      host: "{{ cluster_secret['server'] }}"
-      validate_certs: "{{ not cluster_secret['insecure'] }}"
+      kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
   block:
     - include_tasks: "tasks/sso/configure-oauth-oidc.yaml"
       vars:

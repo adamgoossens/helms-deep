@@ -1,0 +1,13 @@
+{% for cl in console_links|default([]) %}
+---
+apiVersion: console.openshift.io/v1
+kind: ConsoleLink
+metadata:
+  name: {{ cl.name }}-consolelink
+spec:
+  applicationMenu:
+    section: {{ cl.applicationMenu.section }}
+  href: '{{ cl.href }}'
+  location: {{ cl.location }}
+  text: {{ cl.text }}
+{% endfor %}

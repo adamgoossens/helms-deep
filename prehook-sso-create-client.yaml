@@ -22,7 +22,9 @@
     ########
     # Start main block
     ########
-    - module_defaults:
+    - when:
+        - target_clusters|length > 0
+      module_defaults:
         community.kubernetes.k8s_info:
           kubeconfig: "{{ kubeconfig.path }}"
         community.kubernetes.k8s:
@@ -45,6 +47,16 @@
         delay: 30
         retries: 20
 
+      # we're going to generate a bunch of kubeconfig files, rather than
+      # pass tokens, URLs, etc around.
+      #
+      - tempfile:
+          state: file
+        register: kubeconfig_tempfiles
+        loop: "{{ target_clusters }}"
+
+      # generate the dict full 'o' cluster secrets, for use in later methods
+      # 
       - set_fact:
           cluster_secrets: "{{ cluster_secrets | default({}) | combine(cluster | items2dict) }}"
         vars:
@@ -59,6 +71,21 @@
                 token: "{{ cluster_config['bearerToken'] }}"
                 server: "{{ cluster_server }}"
                 insecure: "{{ cluster_config['tlsClientConfig']['insecure'] | bool }}"
+                kubeconfig: "{{ kubeconfig_tempfiles.results[idx].path }}"
+        loop: "{{ target_clusters }}"
+        loop_control:
+          index_var: idx
+
+      # now fill in the kubeconfig file
+      #
+      - copy:
+          content: "{{ lookup('template', 'bootstrap-templates/kubeconfig.j2') }}"
+          dest: "{{ kubeconfig_path }}"
+        vars:
+          api_url: "{{ cluster_secrets[item]['server'] }}"
+          api_username: doesnotmatter
+          api_token: "{{ cluster_secrets[item]['token'] }}"
+          kubeconfig_path: "{{ cluster_secrets[item]['kubeconfig'] }}"
         loop: "{{ target_clusters }}"
 
       - include_tasks: tasks/acm/prehook-ensure-keycloakclient.yaml
@@ -68,9 +95,8 @@
           cluster_namespace: "{{ item }}"
         loop: "{{ target_clusters }}"
 
-      - include_tasks: tasks/acm/prehook-ensure-acs-collector.yaml
+      - include_tasks: tasks/acs/deploy-collector.yaml
         vars:
           cluster_secret: "{{ cluster_secrets[item] }}"
           cluster_name: "{{ item }}"
-          cluster_namespace: "{{ item }}"
         loop: "{{ target_clusters }}"
