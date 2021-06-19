@@ -60,9 +60,8 @@
       - set_fact:
           cluster_secrets: "{{ cluster_secrets | default({}) | combine(cluster | items2dict) }}"
         vars:
-          secret: "{{item}}-cluster-secret"
-          query: "results[*].resources[?metadata.name=='{{secret}}'] | [0] | [0]"
-          target_secret: "{{ (secrets | json_query(query)) }}"
+          query: "results[?item=='{{item}}'].resources[0]"
+          target_secret: "{{ (secrets | json_query(query)) | first }}"
           cluster_config: "{{ target_secret['data']['config'] | b64decode | from_yaml }}"
           cluster_server: "{{ target_secret['data']['server'] | b64decode }}"
           cluster:
