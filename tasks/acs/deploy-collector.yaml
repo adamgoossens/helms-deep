@@ -77,7 +77,7 @@
 - set_fact:
     helm_values:
       centralEndpoint: "{{ central_route.resources[0].spec.host }}:443"
-      clusterName: "central"
+      clusterName: "{{ cluster_name }}"
       imagePullSecrets:
         allowNone: true
 
