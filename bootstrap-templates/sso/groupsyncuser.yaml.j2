@@ -1,0 +1,21 @@
+---
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakUser
+metadata:
+  name: groupsync
+  namespace: helms-deep-sso
+  labels:
+    app: sso
+spec:
+  realmSelector:
+    matchLabels:
+      app: sso
+  user:
+    credentials:
+      - type: password
+        value: {{ groupsync_password }}
+    email: groupsync@helms.deep
+    enabled: true
+    firstName: Group
+    lastName: Sync
+    username: groupsync
