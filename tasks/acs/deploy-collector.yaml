@@ -83,6 +83,7 @@
 
 - name: acs - deploy or remove ACS collector services on this cluster
   community.kubernetes.helm:
+    kubeconfig: "{{ cluster_kubeconfig|default(omit) }}"
     name: stackrox-secured-cluster-services
     chart_ref: "{{ acs.collector.chart_ref }}"
     release_namespace: stackrox

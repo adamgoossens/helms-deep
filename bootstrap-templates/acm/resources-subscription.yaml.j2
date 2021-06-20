@@ -73,6 +73,9 @@ metadata:
   name: non-local-clusters
   namespace: helms-deep
 spec:
+  clusterConditions:
+    - type: ManagedClusterConditionAvailable
+      status: "True"
   clusterSelector:
     matchExpressions:
       - key: local-cluster

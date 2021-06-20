@@ -96,6 +96,7 @@
 
       - include_tasks: tasks/acs/deploy-collector.yaml
         vars:
+          cluster_kubeconfig: "{{ cluster_secrets[item]['kubeconfig'] }}"
           cluster_secret: "{{ cluster_secrets[item] }}"
           cluster_name: "{{ item }}"
         loop: "{{ target_clusters }}"
