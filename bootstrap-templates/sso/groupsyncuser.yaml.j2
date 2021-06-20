@@ -14,6 +14,11 @@ spec:
     credentials:
       - type: password
         value: {{ groupsync_password }}
+    clientRoles:
+      "realm-management":
+        - query-users
+        - query-groups
+        - view-users
     email: groupsync@helms.deep
     enabled: true
     firstName: Group

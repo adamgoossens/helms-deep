@@ -87,6 +87,27 @@
           kubeconfig_path: "{{ cluster_secrets[item]['kubeconfig'] }}"
         loop: "{{ target_clusters }}"
 
+      - name: fetch Keycloak resource
+        community.kubernetes.k8s_info:
+          api_version: keycloak.org/v1alpha1
+          kind: Keycloak
+          name: sso
+          namespace: helms-deep-sso
+        register: keycloak
+
+      - set_fact:
+          keycloak_url: "{{ keycloak.resources[0].status.internalURL }}"
+
+      # fetch common data needed for all clusters
+      #
+      - name: fetch groupsync client secret
+        community.kubernetes.k8s_info:
+          api_version: v1
+          kind: Secret
+          namespace: helms-deep-sso
+          name: helms-deep-group-sync-credentials
+        register: groupsync_credentials
+
       - include_tasks: tasks/acm/prehook-ensure-keycloakclient.yaml
         vars:
           cluster_secret: "{{ cluster_secrets[item] }}"

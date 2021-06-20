@@ -30,7 +30,7 @@
       api_version: v1
       metadata:
         name: "helms-deep-group-sync-credentials" 
-        namespace: helms-deep
+        namespace: helms-deep-sso
       data:
         username: "{{ 'groupsync' | b64encode }}"
         password: "{{ groupsync_password | b64encode }}"

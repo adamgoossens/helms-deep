@@ -1,12 +1,4 @@
 ---
-- name: fetch Keycloak resource
-  community.kubernetes.k8s_info:
-    api_version: keycloak.org/v1alpha1
-    kind: Keycloak
-    name: sso
-    namespace: helms-deep-sso
-  register: keycloak
-
 - name: "get cluster DNS from satellite cluster {{ cluster_name }}"
   community.kubernetes.k8s_info:
     kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
@@ -18,8 +10,6 @@
 
 - set_fact:
     sat_cluster_basedomain: "{{ cluster_dns.resources[0].spec.baseDomain }}"
-
-- debug: var=kubeconfig
 
 - include_tasks: "tasks/sso/create-client-and-secret.yaml"
   vars:
@@ -40,4 +30,34 @@
       vars:
         clientId: "{{ cluster_name }}-cluster"
         clientSecret: "{{ client_secret.resources[0].data.CLIENT_SECRET | b64decode }}"
-        keycloakUrl: "{{ keycloak.resources[0].status.internalURL }}"
+        keycloakUrl: "{{ keycloak_url }}"
+
+    - name: deploy groupsync secret
+      community.kubernetes.k8s:
+        kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
+        definition:
+          kind: Secret
+          api_version: v1
+          metadata:
+            name: "helms-deep-group-sync-credentials"
+            namespace: helms-deep
+          data:
+            username: "{{ groupsync_credentials.resources[0].data.username }}"
+            password: "{{ groupsync_credentials.resources[0].data.password }}"
+          type: Opaque
+
+    - name: deploy GroupSync resource
+      community.kubernetes.k8s:
+        kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
+        definition: "{{ lookup('template', 'templates/sso/groupsync.yaml.j2') }}"
+      vars:
+        cluster_groups:
+          - "{{ cluster_name }}-cluster-admins"
+          - "{{ cluster_name }}-auditors"
+          - "{{ cluster_name }}-developers"
+        sync_groups: "{{ cluster_groups + ( groupsync_common_groups | default([]) ) }}"
+      register: gs
+      until:
+        - not gs.failed
+      delay: 10
+      retries: 30
