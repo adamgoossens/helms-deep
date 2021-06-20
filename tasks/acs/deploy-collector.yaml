@@ -81,6 +81,15 @@
       imagePullSecrets:
         allowNone: true
 
+- name: acs - ensure stackrox namespace exists
+  community.kubernetes.k8s:
+    kubeconfig: "{{ cluster_kubeconfig|default(omit) }}"
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: stackrox
+
 - name: acs - deploy or remove ACS collector services on this cluster
   community.kubernetes.helm:
     kubeconfig: "{{ cluster_kubeconfig|default(omit) }}"
