@@ -19,10 +19,8 @@ acm:
 
 sso:
   groupsToCreate:
-    - auditors
-    - container-platform-admins
-    - developers
-
+    - allclusters-cluster-admins
+    - allclusters-auditors
   usersToCreate: []
 
 rbac:
