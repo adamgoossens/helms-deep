@@ -3,10 +3,6 @@
   community.kubernetes.k8s:
     definition: "{{ lookup('file', 'bootstrap-templates/acm/multiclusterhub.yaml') | from_yaml }}"
 
-- name: acm - create Subscription to gitops repo
-  community.kubernetes.k8s:
-    definition: "{{ lookup('template', 'bootstrap-templates/acm/resources-subscription.yaml.j2') | from_yaml_all | list }}"
-
 - name: acm - wait for MultiClusterHub to rollout (15 minutes)
   community.kubernetes.k8s_info:
     api_version: operator.open-cluster-management.io/v1
@@ -34,6 +30,10 @@
         - apiGroup: rbac.authorization.k8s.io
           kind: User
           name: "system:serviceaccount:open-cluster-management-agent-addon:klusterlet-addon-appmgr"
+
+- name: acm - create Subscription to gitops repo
+  community.kubernetes.k8s:
+    definition: "{{ lookup('template', 'bootstrap-templates/acm/resources-subscription.yaml.j2') | from_yaml_all | list }}"
 
 - name: acm - check if cluster keypair already exists
   community.kubernetes.k8s_info:
