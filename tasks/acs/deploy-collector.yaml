@@ -1,4 +1,6 @@
 ---
+- debug: var=cluster_kubeconfig
+
 - name: acs - get central route
   community.kubernetes.k8s_info:
     api_version: route.openshift.io/v1
@@ -26,21 +28,6 @@
 - when:
     - (ib_secret.resources | length == 0)
   block:
-    - name: acs - get list of generated secrets
-      community.kubernetes.k8s_info:
-        api_version: v1
-        kind: Secret
-        namespace: stackrox
-      register: all_stackrox_secrets
-
-    - set_fact:
-        stackrox_secret: "{{ all_stackrox_secrets | to_json | from_json | json_query(query) | first }}"
-      vars:
-        query: "resources[?starts_with(metadata.name, 'stackrox-generated')]"
-
-    - set_fact:
-        stackrox_admin_credential: "{{ (stackrox_secret.data['generated-values.yaml'] | b64decode | from_yaml).central.adminPassword.value }}"
-
     - name: acs - generate init bundle
       uri:
         url: "https://{{ central_route.resources[0].spec.host }}/v1/cluster-init/init-bundles"
