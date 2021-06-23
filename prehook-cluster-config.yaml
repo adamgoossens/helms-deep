@@ -108,6 +108,28 @@
           name: helms-deep-group-sync-credentials
         register: groupsync_credentials
 
+      - name: acs - get list of generated secrets
+        community.kubernetes.k8s_info:
+          api_version: v1
+          kind: Secret
+          namespace: stackrox
+        register: all_stackrox_secrets
+
+      - name: acs - get central route
+        community.kubernetes.k8s_info:
+          api_version: route.openshift.io/v1
+          kind: Route
+          name: central
+          namespace: stackrox
+        register: central_route
+
+      - set_fact:
+          stackrox_central_url: "https://{{ central_route.resources[0].spec.host }}"
+          stackrox_admin_credential: "{{ (stackrox_secret.data['generated-values.yaml'] | b64decode | from_yaml).central.adminPassword.value }}"
+        vars:
+          query: "resources[?starts_with(metadata.name, 'stackrox-generated')]"
+          stackrox_secret: "{{ all_stackrox_secrets | to_json | from_json | json_query(query) | first }}"
+
       - include_tasks: tasks/acm/prehook-ensure-keycloakclient.yaml
         vars:
           cluster_secret: "{{ cluster_secrets[item] }}"
