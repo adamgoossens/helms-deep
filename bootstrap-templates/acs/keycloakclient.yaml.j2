@@ -1,0 +1,23 @@
+apiVersion: keycloak.org/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: advanced-cluster-security
+  namespace: helms-deep-sso
+  labels:
+    app: sso
+spec:
+  realmSelector:
+    matchLabels:
+      realm: helms-deep
+      app: sso
+  client:
+    clientId: advanced-cluster-security
+    name: "Advanced Cluster Security"
+    enabled: true
+    clientAuthenticatorType: client-secret
+    publicClient: false
+    redirectUris:
+      - '{{ stackrox_central_url }}/sso/providers/oidc/callback'
+    rootUrl: '{{ stackrox_central_url }}'
+    protocol: openid-connect
+    standardFlowEnabled: true
