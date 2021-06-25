@@ -17,3 +17,5 @@
       stringData:
         token: "{{ vault_acm_aap_token }}"
         host: "{{ ansible_tower_url }}"
+  when:
+    - ansible_tower_url is defined
