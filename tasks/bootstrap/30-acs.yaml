@@ -82,4 +82,3 @@
   vars:
     cluster_name: "central"
     cluster_kubeconfig: "{{ kubeconfig.path }}"
-    stackrox_admin_credential: "{{ stackrox_admin_credential }}"
