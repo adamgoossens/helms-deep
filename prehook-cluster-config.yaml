@@ -21,9 +21,9 @@
 
     - set_fact:
         target_clusters: 
-          - "{{ clusterDeployment.clusterName }}"
+          - "{{ cluster_deployment.clusterName }}"
       when:
-        - clusterDeployment is defined
+        - cluster_deployment is defined
 
     ########
     # Start main block
