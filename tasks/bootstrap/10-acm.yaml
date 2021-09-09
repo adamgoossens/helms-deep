@@ -1,78 +1,81 @@
 ---
-- name: acm - create MultiClusterHub resource
-  community.kubernetes.k8s:
-    definition: "{{ lookup('file', 'bootstrap-templates/acm/multiclusterhub.yaml') | from_yaml }}"
-
-- name: acm - wait for MultiClusterHub to rollout (15 minutes)
-  community.kubernetes.k8s_info:
-    api_version: operator.open-cluster-management.io/v1
-    kind: MultiClusterHub
-    namespace: open-cluster-management
-    name: multiclusterhub
-  register: mch
-  until:
-  - mch.resources[0].status is defined
-  - mch.resources[0].status.phase == 'Running'
-  retries: 30
-  delay: 30
-
-- name: acm - update subscription-admin role binding to include the service account of MCH
-  community.kubernetes.k8s:
-    definition:
-      apiVersion: rbac.authorization.k8s.io/v1
-      kind: ClusterRoleBinding
-      metadata:
-        name: open-cluster-management:subscription-admin
-      subjects:
-        - apiGroup: rbac.authorization.k8s.io
-          kind: User
-          name: opentlc-mgr
-        - apiGroup: rbac.authorization.k8s.io
-          kind: User
-          name: "system:serviceaccount:open-cluster-management-agent-addon:klusterlet-addon-appmgr"
-
-- name: acm - create Subscription to gitops repo
-  community.kubernetes.k8s:
-    definition: "{{ lookup('template', 'bootstrap-templates/acm/resources-subscription.yaml.j2') | from_yaml_all | list }}"
-
-- name: acm - check if cluster keypair already exists
-  community.kubernetes.k8s_info:
-    kind: Secret
-    name: core-user-ssh-private-key
-    namespace: helms-deep
-  register: keypair_secret
-
-- when:
-  - keypair_secret.resources | length == 0
+- tags:
+  - acm
   block:
-  - name: acm - tempfile for keypairs
-    tempfile:
-      state: file
-    register: keypair
+  - name: acm - create MultiClusterHub resource
+    kubernetes.core.k8s:
+      definition: "{{ lookup('file', 'bootstrap-templates/acm/multiclusterhub.yaml') | from_yaml }}"
 
-  - name: acm - generate public/private keypair for satellite clusters
-    community.crypto.openssh_keypair:
-      regenerate: always
-      path: "{{ keypair.path }}"
+  - name: acm - wait for MultiClusterHub to rollout (15 minutes)
+    kubernetes.core.k8s_info:
+      api_version: operator.open-cluster-management.io/v1
+      kind: MultiClusterHub
+      namespace: open-cluster-management
+      name: multiclusterhub
+    register: mch
+    until:
+    - mch.resources[0].status is defined
+    - mch.resources[0].status.phase == 'Running'
+    retries: 30
+    delay: 30
 
-  - set_fact:
-      acm_public_keyfile: "{{ keypair.path }}.pub"
-      acm_private_keyfile: "{{ keypair.path }}"
-
-  - name: acm - create secret for keypair
-    community.kubernetes.k8s:
+  - name: acm - update subscription-admin role binding to include the service account of MCH
+    kubernetes.core.k8s:
       definition:
-        apiVersion: v1
-        kind: Secret
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
         metadata:
-          name: core-user-ssh-private-key
-          namespace: 'helms-deep'
-        data:
-          ssh-privatekey: |-
-            {{ ssh_private_key | b64encode }}
-          ssh-publickey: |-
-            {{ ssh_public_key | b64encode }}
-        type: Opaque
-    vars:
-      ssh_private_key: "{{ lookup('file', acm_private_keyfile) }}"
-      ssh_public_key: "{{ lookup('file', acm_public_keyfile ) }}"
+          name: open-cluster-management:subscription-admin
+        subjects:
+          - apiGroup: rbac.authorization.k8s.io
+            kind: User
+            name: opentlc-mgr
+          - apiGroup: rbac.authorization.k8s.io
+            kind: User
+            name: "system:serviceaccount:open-cluster-management-agent-addon:klusterlet-addon-appmgr"
+
+  - name: acm - create Subscription to gitops repo
+    kubernetes.core.k8s:
+      definition: "{{ lookup('template', 'bootstrap-templates/acm/resources-subscription.yaml.j2') | from_yaml_all | list }}"
+
+  - name: acm - check if cluster keypair already exists
+    kubernetes.core.k8s_info:
+      kind: Secret
+      name: core-user-ssh-private-key
+      namespace: helms-deep
+    register: keypair_secret
+
+  - when:
+    - keypair_secret.resources | length == 0
+    block:
+    - name: acm - tempfile for keypairs
+      tempfile:
+        state: file
+      register: keypair
+
+    - name: acm - generate public/private keypair for satellite clusters
+      community.crypto.openssh_keypair:
+        regenerate: always
+        path: "{{ keypair.path }}"
+
+    - set_fact:
+        acm_public_keyfile: "{{ keypair.path }}.pub"
+        acm_private_keyfile: "{{ keypair.path }}"
+
+    - name: acm - create secret for keypair
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: core-user-ssh-private-key
+            namespace: 'helms-deep'
+          data:
+            ssh-privatekey: |-
+              {{ ssh_private_key | b64encode }}
+            ssh-publickey: |-
+              {{ ssh_public_key | b64encode }}
+          type: Opaque
+      vars:
+        ssh_private_key: "{{ lookup('file', acm_private_keyfile) }}"
+        ssh_public_key: "{{ lookup('file', acm_public_keyfile ) }}"

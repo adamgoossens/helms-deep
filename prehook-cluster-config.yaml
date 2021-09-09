@@ -19,21 +19,27 @@
       tags:
       - k8s
 
+    - set_fact:
+        target_clusters: 
+          - "{{ clusterDeployment.clusterName }}"
+      when:
+        - clusterDeployment is defined
+
     ########
     # Start main block
     ########
     - when:
         - target_clusters|length > 0
       module_defaults:
-        community.kubernetes.k8s_info:
+        kubernetes.core.k8s_info:
           kubeconfig: "{{ kubeconfig.path }}"
-        community.kubernetes.k8s:
+        kubernetes.core.k8s:
           kubeconfig: "{{ kubeconfig.path }}"
-        community.kubernetes.helm:
+        kubernetes.core.helm:
           kubeconfig: "{{ kubeconfig.path }}"
       block:
       - name: prehook - fetch secrets for all clusters (up to 20 min wait)
-        community.kubernetes.k8s_info:
+        kubernetes.core.k8s_info:
           api_version: v1
           kind: Secret
           name: "{{ name }}-cluster-secret"
@@ -88,7 +94,7 @@
         loop: "{{ target_clusters }}"
 
       - name: fetch Keycloak resource
-        community.kubernetes.k8s_info:
+        kubernetes.core.k8s_info:
           api_version: keycloak.org/v1alpha1
           kind: Keycloak
           name: sso
@@ -101,7 +107,7 @@
       # fetch common data needed for all clusters
       #
       - name: fetch groupsync client secret
-        community.kubernetes.k8s_info:
+        kubernetes.core.k8s_info:
           api_version: v1
           kind: Secret
           namespace: helms-deep-sso
@@ -109,14 +115,14 @@
         register: groupsync_credentials
 
       - name: acs - get list of generated secrets
-        community.kubernetes.k8s_info:
+        kubernetes.core.k8s_info:
           api_version: v1
           kind: Secret
           namespace: stackrox
         register: all_stackrox_secrets
 
       - name: acs - get central route
-        community.kubernetes.k8s_info:
+        kubernetes.core.k8s_info:
           api_version: route.openshift.io/v1
           kind: Route
           name: central

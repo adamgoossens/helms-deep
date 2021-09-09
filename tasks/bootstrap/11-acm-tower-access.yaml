@@ -6,16 +6,19 @@
 #
 ##############################
 ---
-- name: acs - create secret for launching Tower jobs
-  community.kubernetes.k8s:
-    definition:
-      apiVersion: v1
-      kind: Secret
-      metadata:
-        name: toweraccess
-        namespace: helms-deep
-      stringData:
-        token: "{{ vault_acm_aap_token }}"
-        host: "{{ ansible_tower_url }}"
-  when:
-    - ansible_tower_url is defined
+- tags:
+  - acm
+  block:
+  - name: acs - create secret for launching Tower jobs
+    kubernetes.core.k8s:
+      definition:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: toweraccess
+          namespace: helms-deep
+        stringData:
+          token: "{{ vault_acm_aap_token }}"
+          host: "{{ ansible_tower_url }}"
+    when:
+      - ansible_tower_url is defined

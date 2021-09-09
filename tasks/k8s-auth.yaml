@@ -2,7 +2,7 @@
   - token is not defined
   block:
   - name: k8s - get kubernetes auth token
-    community.kubernetes.k8s_auth:
+    community.okd.openshift_auth:
       host: "{{ host }}"
       validate_certs: "{{ validate_certs }}"
       username: "{{ username }}"

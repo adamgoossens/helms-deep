@@ -15,15 +15,15 @@
     # Start main block
     #######################
     - module_defaults:
-        community.kubernetes.k8s_info:
+        kubernetes.core.k8s_info:
           kubeconfig: "{{ kubeconfig.path }}"
-        community.kubernetes.k8s:
+        kubernetes.core.k8s:
           kubeconfig: "{{ kubeconfig.path }}"
-        community.kubernetes.helm:
+        kubernetes.core.helm:
           kubeconfig: "{{ kubeconfig.path }}"
       block:
       - name: get cluster DNS
-        community.kubernetes.k8s_info:
+        kubernetes.core.k8s_info:
           api_version: config.openshift.io/v1
           kind: DNS
           namespace: openshift-config
@@ -34,7 +34,7 @@
           cluster_basedomain: "{{ (cluster_dns.resources|first).spec.baseDomain }}"
 
       - name: apply kubernetes resources - pre-deployment
-        community.kubernetes.k8s:
+        kubernetes.core.k8s:
           merge_type: 'merge'
           definition: "{{ lookup('file', item) | from_yaml }}"
         tags:
@@ -49,21 +49,5 @@
         loop: "{{ query('fileglob','tasks/bootstrap/*.yaml') | sort }}"
 
       - name: deploy ConsoleLinks
-        community.kubernetes.k8s:
+        kubernetes.core.k8s:
           definition: "{{ lookup('template', 'bootstrap-templates/consolelinks.yaml.j2') | from_yaml_all | list }}"
-
-      #####
-      # Start MCH rollout now; it takes some time.
-      #
-      # ACM will roll out the rest of the resources.
-      #####
-#      - tags:
-#        - acm
-#        import_tasks: tasks/bootstrap/bootstrap-acm.yaml
-#
-#      ####
-#      # Start ACS rollout now.
-#      ####
-#      - tags:
-#        - acs
-#        import_tasks: tasks/bootstrap/bootstrap-acs.yaml

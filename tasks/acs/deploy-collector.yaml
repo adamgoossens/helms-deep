@@ -1,8 +1,6 @@
 ---
-- debug: var=cluster_kubeconfig
-
 - name: acs - get central route
-  community.kubernetes.k8s_info:
+  kubernetes.core.k8s_info:
     api_version: route.openshift.io/v1
     kind: Route
     namespace: stackrox
@@ -13,7 +11,7 @@
     init_bundle_name: "{{ cluster_name }}-init-bundle"
 
 - name: acs - check if init bundle secret exists
-  community.kubernetes.k8s_info:
+  kubernetes.core.k8s_info:
     api_version: v1
     kind: Secret
     namespace: helms-deep
@@ -45,7 +43,7 @@
         bundle_data: "{{ init_bundle_api_result.json }}"
 
     - name: acs - store init bundle
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         definition:
           apiVersion: v1
           kind: Secret
@@ -69,7 +67,7 @@
         allowNone: true
 
 - name: "acs - {{ cluster_name }} - ensure stackrox namespace exists"
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ cluster_kubeconfig|default(omit) }}"
     definition:
       apiVersion: v1
@@ -78,7 +76,7 @@
         name: stackrox
 
 - name: "acs - {{ cluster_name }} - deploy or remove ACS collector services on this cluster"
-  community.kubernetes.helm:
+  kubernetes.core.helm:
     kubeconfig: "{{ cluster_kubeconfig|default(omit) }}"
     name: stackrox-secured-cluster-services
     chart_ref: "{{ acs.collector.chart_ref }}"

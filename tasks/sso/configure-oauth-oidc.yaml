@@ -1,5 +1,5 @@
 - name: sso - create OAuth client secret in openshift-config namespace
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     definition:
       kind: Secret
       api_version: v1
@@ -11,7 +11,7 @@
       type: Opaque
 
 - name: sso - get existing OAuth configuration
-  community.kubernetes.k8s_info:
+  kubernetes.core.k8s_info:
     api_version: 'config.openshift.io/v1'
     kind: OAuth
     name: cluster
@@ -58,6 +58,6 @@
             identityProviders: "{{ original_idps | union([new_idp]) }}"
 
     - name: sso - submit updated OAuth
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         merge_type: 'merge'
         definition: "{{ oauth }}"

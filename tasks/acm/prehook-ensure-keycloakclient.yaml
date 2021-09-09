@@ -1,6 +1,6 @@
 ---
 - name: "get cluster DNS from satellite cluster {{ cluster_name }}"
-  community.kubernetes.k8s_info:
+  kubernetes.core.k8s_info:
     kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
     api_version: config.openshift.io/v1
     kind: DNS
@@ -21,9 +21,9 @@
       - 'https://oauth-openshift.apps.{{ sat_cluster_basedomain }}/*'
 
 - module_defaults:
-    community.kubernetes.k8s:
+    kubernetes.core.k8s:
       kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
-    community.kubernetes.k8s_info:
+    kubernetes.core.k8s_info:
       kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
   block:
     - include_tasks: "tasks/sso/configure-oauth-oidc.yaml"
@@ -33,7 +33,7 @@
         keycloakUrl: "{{ keycloak_url }}"
 
     - name: deploy groupsync secret
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
         definition:
           kind: Secret
@@ -47,7 +47,7 @@
           type: Opaque
 
     - name: deploy GroupSync resource
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
         definition: "{{ lookup('template', 'templates/sso/groupsync.yaml.j2') }}"
       vars:

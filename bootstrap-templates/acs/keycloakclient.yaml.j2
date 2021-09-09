@@ -17,7 +17,48 @@ spec:
     clientAuthenticatorType: client-secret
     publicClient: false
     redirectUris:
+      - '{{ stackrox_central_url }}/auth/response/oidc'
       - '{{ stackrox_central_url }}/sso/providers/oidc/callback'
     rootUrl: '{{ stackrox_central_url }}'
     protocol: openid-connect
     standardFlowEnabled: true
+    protocolMappers:
+      - config:
+          access.token.claim: 'true'
+          claim.name: name
+          id.token.claim: 'true'
+          jsonType.label: String
+          user.attribute: username
+          userinfo.token.claim: 'true'
+        consentRequired: false
+        name: 'name'
+        protocol: openid-connect
+        protocolMapper: oidc-usermodel-property-mapper
+      - config:
+          access.token.claim: 'true'
+          id.token.claim: 'true'
+          userinfo.token.claim: 'true'
+        consentRequired: false
+        name: 'full name'
+        protocol: openid-connect
+        protocolMapper: oidc-full-name-mapper
+      - config:
+          access.token.claim: 'true'
+          claim.name: email
+          id.token.claim: 'true'
+          jsonType.label: String
+          user.attribute: email
+          userinfo.token.claim: 'true'
+        consentRequired: false
+        protocol: openid-connect
+        protocolMapper: oidc-usermodel-property-mapper
+        name: 'email'
+      - config:
+          access.token.claim: 'true'
+          claim.name: groups
+          id.token.claim: 'true'
+          userinfo.token.claim: 'true'
+        consentRequired: false
+        protocol: openid-connect
+        protocolMapper: oidc-group-membership-mapper
+        name: 'groups'

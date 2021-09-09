@@ -1,19 +1,5 @@
 ansible_tower_url: https://aap.adamgoossens.com
 
-acs:
-  central:
-    helmValues:
-      imagePullSecrets:
-        allowNone: true
-      central:
-        exposure:
-          route:
-            enabled: true
-    chart_ref: 'https://mirror.openshift.com/pub/rhacs/charts/stackrox-central-services-61.0.0.tgz'
-  collector:
-    helmValues: {}
-    chart_ref: 'https://mirror.openshift.com/pub/rhacs/charts/stackrox-secured-cluster-services-61.0.0.tgz'
-
 acm:
   gitopsRepoUrl: 'https://github.com/adamgoossens/helms-deep-resources.git'
 
@@ -27,36 +13,35 @@ rbac:
 
 namespaces:
   - { name: helms-deep, displayName: "HELMS DEEP" }
+  - { name: advanced-cluster-security, displayName: "HELMS DEEP Advanced Cluster Security" }
   - { name: open-cluster-management, displayName: "HELMS DEEP Advanced Cluster Management" }
-  - { name: stackrox, displayName: "HELMS DEEP Advanced Cluster Security", createOperatorGroup: false }
   - { name: helms-deep-sso, displayName: "HELMS DEEP Single Sign On" }
   - { name: helms-deep-registry-prod, displayName: "HELMS DEEP Production Registry" }
   - { name: helms-deep-eck, displayName: "HELMS DEEP ECK Cluster" }
   - { name: openshift-storage, displayName: "HELMS DEEP Storage" }
 
-catalogSources:
-  - name: redhatcop-operators
-    displayName: Red Hat CoP Community Operators
-    image: quay.io/agoossen/redhatcop-operators-index:0.0.1
-    publisher: RedHatCoP
-    sourceType: grpc
+catalogSources: []
 
 subscriptions:
+  - name: rhacs-operator
+    namespace: openshift-operators
+    channel: latest
+
   - name: awx-resource-operator
     namespace: helms-deep
     channel: release-0.1
 
   - name: advanced-cluster-management
     namespace: open-cluster-management
-    channel: release-2.2
+    channel: release-2.3
 
   - name: group-sync-operator
     namespace: helms-deep-sso
-    source: redhatcop-operators
+    source: community-operators
     channel: alpha
 
   - name: ocs-operator
-    channel: stable-4.6
+    channel: stable-4.7
     namespace: openshift-storage
 
   - name: quay-operator

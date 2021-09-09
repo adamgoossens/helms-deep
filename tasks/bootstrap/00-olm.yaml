@@ -1,36 +1,39 @@
-- name: olm - create required resources
-  community.kubernetes.k8s:
-    definition: "{{ lookup('template', 'bootstrap-templates/olm/olm.yaml.j2') | from_yaml_all | list }}"
+- tags:
+  - olm
+  block:
+  - name: olm - create required resources
+    kubernetes.core.k8s:
+      definition: "{{ lookup('template', 'bootstrap-templates/olm/olm.yaml.j2') | from_yaml_all | list }}"
 
-- name: olm - wait for CatalogSources to reach READY
-  community.kubernetes.k8s_info:
-    api_version: "operators.coreos.com/v1alpha1"
-    kind: CatalogSource
-    name: "{{ item.name }}"
-    namespace: "{{ item.namespace|default('openshift-marketplace') }}"
-  loop: "{{ catalogSources }}"
-  register: cs
-  until:
-    - cs.resources[0].status is defined
-    - cs.resources[0].status.connectionState is defined
-    - cs.resources[0].status.connectionState.lastObservedState|lower == 'ready'
-  delay: 15
-  retries: 20
+  - name: olm - wait for CatalogSources to reach READY
+    kubernetes.core.k8s_info:
+      api_version: "operators.coreos.com/v1alpha1"
+      kind: CatalogSource
+      name: "{{ item.name }}"
+      namespace: "{{ item.namespace|default('openshift-marketplace') }}"
+    loop: "{{ catalogSources }}"
+    register: cs
+    until:
+      - cs.resources[0].status is defined
+      - cs.resources[0].status.connectionState is defined
+      - cs.resources[0].status.connectionState.lastObservedState|lower == 'ready'
+    delay: 15
+    retries: 20
 
-- name: olm - create operator Subscriptions
-  community.kubernetes.k8s:
-    definition: "{{ lookup('template', 'bootstrap-templates/olm/subscriptions.yaml.j2') }}"
+  - name: olm - create operator Subscriptions
+    kubernetes.core.k8s:
+      definition: "{{ lookup('template', 'bootstrap-templates/olm/subscriptions.yaml.j2') }}"
 
-- name: olm - wait for all subscriptions to reach AtLatestKnown state
-  community.kubernetes.k8s_info:
-    api_version: "operators.coreos.com/v1alpha1"
-    kind: Subscription
-    name: "{{ item.name }}"
-    namespace: "{{ item.namespace }}"
-  register: sub
-  until:
-    - sub.resources[0].status is defined
-    - sub.resources[0].status.state | default('doesnotexist') | lower == 'atlatestknown'
-  loop: "{{ subscriptions }}"
-  delay: 10
-  retries: 30
+  - name: olm - wait for all subscriptions to reach AtLatestKnown state
+    kubernetes.core.k8s_info:
+      api_version: "operators.coreos.com/v1alpha1"
+      kind: Subscription
+      name: "{{ item.name }}"
+      namespace: "{{ item.namespace }}"
+    register: sub
+    until:
+      - sub.resources[0].status is defined
+      - sub.resources[0].status.state | default('doesnotexist') | lower == 'atlatestknown'
+    loop: "{{ subscriptions }}"
+    delay: 10
+    retries: 30

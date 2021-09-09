@@ -1,41 +1,45 @@
-- name: sso - fetch credential for groupsync user
-  community.kubernetes.k8s_info:
-    api_version: v1
-    kind: Secret
-    name: "credential-helms-deep-groupsync-helms-deep-sso"
-    namespace: helms-deep-sso
-  register: groupsync_credential
-
-##
-# Only set the password once - if the credential secret doesn't exist
-##
-- when:
-  - groupsync_credential.resources|length == 0
-  set_fact:
-    groupsync_password: "{{ lookup('pipe', 'date +%T.%N') | to_uuid }}"
-
-- when:
-  - groupsync_credential.resources|length == 1
-  set_fact:
-    groupsync_password: "{{ groupsync_credential.resources[0].data.password | b64decode }}"
-
-- name: sso - create GroupSync user
-  community.kubernetes.k8s:
-    definition: "{{ lookup('template', 'bootstrap-templates/sso/groupsyncuser.yaml.j2') | from_yaml }}"
-
-- name: sso - create GroupSync keycloak secret
-  community.kubernetes.k8s:
-    definition: 
-      kind: Secret
+- tags:
+  - sso
+  - sso-groupsync
+  block:
+  - name: sso - fetch credential for groupsync user
+    kubernetes.core.k8s_info:
       api_version: v1
-      metadata:
-        name: "helms-deep-group-sync-credentials" 
-        namespace: helms-deep-sso
-      data:
-        username: "{{ 'groupsync' | b64encode }}"
-        password: "{{ groupsync_password | b64encode }}"
-      type: Opaque
+      kind: Secret
+      name: "credential-helms-deep-groupsync-helms-deep-sso"
+      namespace: helms-deep-sso
+    register: groupsync_credential
 
-- name: sso - deploy GroupSync resource
-  community.kubernetes.k8s:
-    definition: "{{ lookup('template', 'bootstrap-templates/sso/groupsync.yaml.j2') | from_yaml }}"
+  ##
+  # Only set the password once - if the credential secret doesn't exist
+  ##
+  - when:
+    - groupsync_credential.resources|length == 0
+    set_fact:
+      groupsync_password: "{{ lookup('pipe', 'date +%T.%N') | to_uuid }}"
+
+  - when:
+    - groupsync_credential.resources|length == 1
+    set_fact:
+      groupsync_password: "{{ groupsync_credential.resources[0].data.password | b64decode }}"
+
+  - name: sso - create GroupSync user
+    kubernetes.core.k8s:
+      definition: "{{ lookup('template', 'bootstrap-templates/sso/groupsyncuser.yaml.j2') | from_yaml }}"
+
+  - name: sso - create GroupSync keycloak secret
+    kubernetes.core.k8s:
+      definition: 
+        kind: Secret
+        api_version: v1
+        metadata:
+          name: "helms-deep-group-sync-credentials" 
+          namespace: helms-deep-sso
+        data:
+          username: "{{ 'groupsync' | b64encode }}"
+          password: "{{ groupsync_password | b64encode }}"
+        type: Opaque
+
+  - name: sso - deploy GroupSync resource
+    kubernetes.core.k8s:
+      definition: "{{ lookup('template', 'bootstrap-templates/sso/groupsync.yaml.j2') | from_yaml }}"

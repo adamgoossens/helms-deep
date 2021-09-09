@@ -1,20 +1,24 @@
-- name: sso - create required groups
-  community.general.keycloak_group:
-   auth_client_id: 'admin-cli'
-   auth_keycloak_url: "{{ keycloak_url }}/auth"
-   auth_realm: master
-   auth_username: "{{ kc_admin_credential.resources[0].data.ADMIN_USERNAME | b64decode }}"
-   auth_password: "{{ kc_admin_credential.resources[0].data.ADMIN_PASSWORD | b64decode }}"
-   realm: helms-deep
-   name: "{{ group }}"
-   state: present
-  loop: "{{ sso.groupsToCreate | default([]) }}"
-  loop_control:
-    loop_var: group
+- tags:
+  - sso
+  - sso-users
+  block:
+  - name: sso - create required groups
+    community.general.keycloak_group:
+     auth_client_id: 'admin-cli'
+     auth_keycloak_url: "{{ keycloak_url }}/auth"
+     auth_realm: master
+     auth_username: "{{ kc_admin_credential.resources[0].data.ADMIN_USERNAME | b64decode }}"
+     auth_password: "{{ kc_admin_credential.resources[0].data.ADMIN_PASSWORD | b64decode }}"
+     realm: helms-deep
+     name: "{{ group }}"
+     state: present
+    loop: "{{ sso.groupsToCreate | default([]) }}"
+    loop_control:
+      loop_var: group
 
-- name: sso - create SSO users
-  community.kubernetes.k8s:
-    definition: "{{ lookup('template', 'bootstrap-templates/sso/keycloakuser.yaml.j2') | from_yaml }}"
-  loop: "{{ sso.usersToCreate | default([]) }}"
-  loop_control:
-    loop_var: user
+  - name: sso - create SSO users
+    kubernetes.core.k8s:
+      definition: "{{ lookup('template', 'bootstrap-templates/sso/keycloakuser.yaml.j2') | from_yaml }}"
+    loop: "{{ sso.usersToCreate | default([]) }}"
+    loop_control:
+      loop_var: user

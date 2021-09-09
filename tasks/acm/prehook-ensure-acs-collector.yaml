@@ -1,6 +1,6 @@
 ---
 - name: fetch acs central route
-  community.kubernetes.k8s_info:
+  kubernetes.core.k8s_info:
     api_version: route.openshift.io/v1
     kind: Route
     namespace: stackrox
@@ -8,7 +8,7 @@
   register: central_route
 
 - name: acs - check if init bundle secret exists
-  community.kubernetes.k8s_info:
+  kubernetes.core.k8s_info:
     api_version: v1
     kind: Secret
     namespace: helms-deep
@@ -24,7 +24,7 @@
     - (ib_secret.resources | length == 0)
   block:
     - name: acs - get list of generated secrets
-      community.kubernetes.k8s_info:
+      kubernetes.core.k8s_info:
         api_version: v1
         kind: Secret
         namespace: stackrox
@@ -55,7 +55,7 @@
         bundle_data: "{{ init_bundle_api_result.json }}"
 
     - name: acs - store init bundle
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
         definition:
           apiVersion: v1
           kind: Secret
@@ -73,7 +73,7 @@
         helm_ib_data: "{{ bundle_data.helmValuesBundle | b64decode | from_yaml }}"
 
 - name: fetch acs init bundle
-  community.kubernetes.k8s_info:
+  kubernetes.core.k8s_info:
     api_version: v1
     kind: Secret
     namespace: helms-deep
@@ -89,7 +89,7 @@
     helm_ib_data: "{{ ib_secret.resources[0].data.helm | b64decode | from_yaml }}"
 
 - name: ensure stackrox namespace exists
-  community.kubernetes.k8s:
+  kubernetes.core.k8s:
     kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
     definition:
       apiVersion: v1
@@ -98,7 +98,7 @@
         name: "stackrox"
 
 - name: deploy ACS collector services
-  community.kubernetes.helm:
+  kubernetes.core.helm:
     kubeconfig: "{{ cluster_secret['kubeconfig'] }}"
     name: stackrox-secured-cluster-services
     chart_ref: "{{ acs.collector.chart_ref }}"

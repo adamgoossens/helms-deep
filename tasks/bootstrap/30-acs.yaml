@@ -1,84 +1,137 @@
 ---
-- name: acs - deploy ACS Helm chart
-  community.kubernetes.helm:
-    name: stackrox-central-services
-    chart_ref: '{{ acs.central.chart_ref }}'
-    release_namespace: stackrox
-    release_values: "{{ acs.central.helmValues }}"
-    wait: true
-  register: acs_helm_out
+- tags:
+  - acs
+  block:
+  - name: acs - create Central resource
+    kubernetes.core.k8s:
+      definition:
+        apiVersion: platform.stackrox.io/v1alpha1
+        kind: Central
+        metadata:
+          name: stackrox-central-services
+          namespace: advanced-cluster-security
+        spec:
+          central:
+            exposure:
+              loadBalancer:
+                enabled: false
+                port: 443
+              nodePort:
+                enabled: false
+              route:
+                enabled: true
+            persistence:
+              persistentVolumeClaim:
+                claimName: stackrox-db
+          egress:
+            connectivityPolicy: Online
+          scanner:
+            analyzer:
+              scaling:
+                autoScaling: Enabled
+                maxReplicas: 5
+                minReplicas: 2
+                replicas: 3
+            scannerComponent: Enabled
 
-- name: acs - get list of generated secrets
-  community.kubernetes.k8s_info:
-    api_version: v1
-    kind: Secret
-    namespace: stackrox
-  register: all_stackrox_secrets
+  - name: acs - wait for Central to rollout
+    kubernetes.core.k8s_info:
+      api_version: platform.stackrox.io/v1alpha1
+      kind: Central
+      namespace: advanced-cluster-security
+      name: stackrox-central-services
+    register: acs
+    until:
+      - acs.resources[0].status is defined
+      - acs.resources[0].status | json_query(query) | length > 0
+    delay: 30
+    retries: 10
+    vars:
+      query: "conditions[?reason=='InstallSuccessful' && status=='True']"
 
-- name: acs - get central route
-  community.kubernetes.k8s_info:
-    api_version: route.openshift.io/v1
-    kind: Route
-    name: central
-    namespace: stackrox
-  register: central_route
+  - name: acs - get central route
+    kubernetes.core.k8s_info:
+      api_version: route.openshift.io/v1
+      kind: Route
+      name: central
+      namespace: advanced-cluster-security
+    register: central_route
 
-- set_fact:
-    stackrox_central_url: "https://{{ central_route.resources[0].spec.host }}"
-    stackrox_admin_credential: "{{ (stackrox_secret.data['generated-values.yaml'] | b64decode | from_yaml).central.adminPassword.value }}"
-    console_links: "{{ console_links | default([]) + [acs_link] }}"
-  vars:
-    query: "resources[?starts_with(metadata.name, 'stackrox-generated')]"
-    stackrox_secret: "{{ all_stackrox_secrets | to_json | from_json | json_query(query) | first }}"
-    acs_link:
-      name: acs
-      applicationMenu:
-        section: Red Hat Applications
-      href: "https://{{ central_route.resources[0].spec.host }}"
-      location: ApplicationMenu
-      text: Red Hat Advanced Cluster Security for Kubernetes
+  - name: acs - fetch ACS admin credential
+    kubernetes.core.k8s_info:
+      api_version: v1
+      kind: Secret
+      namespace: advanced-cluster-security
+      name: "central-htpasswd"
+    register: central_htpasswd
 
-- name: sso - create KeycloakClient for ACS
-  community.kubernetes.k8s:
-    definition: "{{ lookup('template', 'bootstrap-templates/acs/keycloakclient.yaml.j2') | from_yaml }}"
+  - set_fact:
+      stackrox_central_url: "https://{{ central_route.resources[0].spec.host }}"
+      console_links: "{{ console_links | default([]) + [acs_link] }}"
+      stackrox_admin_credential: "{{ central_htpasswd.resources[0].data['password'] | b64decode }}"
+    vars:
+      acs_link:
+        name: acs
+        applicationMenu:
+          section: Red Hat Applications
+        href: "https://{{ central_route.resources[0].spec.host }}"
+        location: ApplicationMenu
+        text: Red Hat Advanced Cluster Security for Kubernetes
 
-- name: sso - fetch ACS client secret
-  community.kubernetes.k8s_info:
-    api_version: v1
-    kind: Secret
-    name: keycloak-client-secret-advanced-cluster-security
-    namespace: helms-deep-sso
-  register: acs_client_secret
-  until:
-    - acs_client_secret.resources|length == 1
-  delay: 10
-  retries: 6
+  - name: sso - create KeycloakClient for ACS
+    kubernetes.core.k8s:
+      definition: "{{ lookup('template', 'bootstrap-templates/acs/keycloakclient.yaml.j2') | from_yaml }}"
 
-- name: acs - create single sign on auth provider
-  uri:
-    url_username: 'admin'
-    url_password: "{{ stackrox_admin_credential }}"
-    force_basic_auth: yes
-    validate_certs: no
-    url: "{{ stackrox_central_url }}/v1/authProviders"
-    method: POST
-    body_format: json
-    body:
-      name: "HELMS DEEP Single Sign On"
-      type: "oidc"
-      config:
-        client_id: "advanced-cluster-security"
-        client_secret: "{{ acs_client_secret.resources[0].data.CLIENT_SECRET | b64decode }}"
-        issuer: "{{ keycloak_url }}/auth/realms/helms-deep"
-        mode: "post"
-      uiEndpoint: "{{ central_route.resources[0].spec.host }}"
-  register: acs_sso
-  failed_when:
-    - acs_sso.status >= 400
-    - acs_sso.json.error is defined
-    - not ('name validation' in acs_sso.json.error)
+  - name: sso - fetch ACS client secret
+    kubernetes.core.k8s_info:
+      api_version: v1
+      kind: Secret
+      name: keycloak-client-secret-advanced-cluster-security
+      namespace: helms-deep-sso
+    register: acs_client_secret
+    until:
+      - acs_client_secret.resources|length == 1
+    delay: 10
+    retries: 6
 
-- include_tasks: tasks/acs/deploy-collector.yaml
-  vars:
-    cluster_name: "central"
-    cluster_kubeconfig: "{{ kubeconfig.path }}"
+  - name: acs - get list of existing auth providers
+    uri:
+      url_username: 'admin'
+      url_password: "{{ stackrox_admin_credential }}"
+      force_basic_auth: yes
+      validate_certs: no
+      url: "{{ stackrox_central_url }}/v1/authProviders"
+      method: GET
+    register: acs_providers
+
+  - name: acs - create single sign on auth provider
+    when:
+      - '"HELMS DEEP Single Sign On" not in acs_providers.json | json_query(query)'
+    vars:
+      query: 'authProviders[].name'
+    uri:
+      url_username: 'admin'
+      url_password: "{{ stackrox_admin_credential }}"
+      force_basic_auth: yes
+      validate_certs: no
+      url: "{{ stackrox_central_url }}/v1/authProviders"
+      method: POST
+      body_format: json
+      body:
+        name: "HELMS DEEP Single Sign On"
+        type: "oidc"
+        config:
+          client_id: "advanced-cluster-security"
+          client_secret: "{{ acs_client_secret.resources[0].data.CLIENT_SECRET | b64decode }}"
+          issuer: "{{ keycloak_url }}/auth/realms/helms-deep"
+          mode: "post"
+        uiEndpoint: "{{ central_route.resources[0].spec.host }}"
+        enabled: true
+        validated: true
+        active: true
+    register: acs_sso
+
+  #- include_tasks: tasks/acs/deploy-collector.yaml
+  #  vars:
+  #    cluster_name: "central"
+  #    cluster_kubeconfig: "{{ kubeconfig.path }}"
