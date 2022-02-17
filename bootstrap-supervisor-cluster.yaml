@@ -15,12 +15,10 @@
     # Start main block
     #######################
     - module_defaults:
-        kubernetes.core.k8s_info:
-          kubeconfig: "{{ kubeconfig.path }}"
-        kubernetes.core.k8s:
-          kubeconfig: "{{ kubeconfig.path }}"
-        kubernetes.core.helm:
-          kubeconfig: "{{ kubeconfig.path }}"
+        group/kubernetes.core.k8s:
+          api_key: "{{ k8s_api_key }}"
+          validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+          host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
       block:
       - name: get cluster DNS
         kubernetes.core.k8s_info:

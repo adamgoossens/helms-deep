@@ -1,6 +1,8 @@
 ---
 - tags:
   - quay
+  when:
+    - services.quay|default(False)
   block:
   - name: quay - create resources for Quay
     kubernetes.core.k8s:

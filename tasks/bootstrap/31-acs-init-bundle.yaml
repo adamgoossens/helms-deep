@@ -1,0 +1,46 @@
+---
+- tags:
+  - acs
+  when:
+    - services.acs|default(False)
+  block:
+    - name: acs - ensure init bundle exists for cluster enrolment
+      adamgoossens.stackrox.initbundle:
+        username: "admin"
+        password: "{{ stackrox_admin_credential }}"
+        central: "{{ stackrox_central_url }}"
+        validate_certs: false
+        name: cluster-init-bundle
+        state: present
+      register: ib
+
+    - when:
+      - ib.changed
+      name: acs - copy init bundle secret to disk
+      copy:
+        content: "{{ ib.initbundle.kubectlBundle | b64decode }}"
+        dest: "./cluster-init-secret.yaml"
+
+    - when:
+      - ib.changed
+      name: acs - create required cluster init bundle secret
+      kubernetes.core.k8s:
+        definition: "{{ ib.initbundle.kubectlBundle | b64decode }}"
+        namespace: advanced-cluster-security
+      register: ib_secrets
+
+    - name: acs - add required annotations to init bundle secrets
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: '{{ item }}'
+            namespace: advanced-cluster-security
+            annotations:
+              is-init-bundle-secret: 'true'
+              apps.open-cluster-management.io/deployables: "true"
+      loop:
+        - collector-tls
+        - sensor-tls
+        - admission-control-tls

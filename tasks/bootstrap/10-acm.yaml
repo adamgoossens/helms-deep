@@ -1,6 +1,8 @@
 ---
 - tags:
   - acm
+  when:
+    - services.acm|default(False)
   block:
   - name: acm - create MultiClusterHub resource
     kubernetes.core.k8s:
@@ -48,19 +50,14 @@
   - when:
     - keypair_secret.resources | length == 0
     block:
-    - name: acm - tempfile for keypairs
-      tempfile:
-        state: file
-      register: keypair
-
     - name: acm - generate public/private keypair for satellite clusters
       community.crypto.openssh_keypair:
         regenerate: always
-        path: "{{ keypair.path }}"
+        path: "./id_rsa.acm"
 
     - set_fact:
-        acm_public_keyfile: "{{ keypair.path }}.pub"
-        acm_private_keyfile: "{{ keypair.path }}"
+        acm_public_keyfile: "./id_rsa.acm.pub"
+        acm_private_keyfile: "./id_rsa.acm"
 
     - name: acm - create secret for keypair
       kubernetes.core.k8s:

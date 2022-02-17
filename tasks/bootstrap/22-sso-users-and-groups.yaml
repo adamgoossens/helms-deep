@@ -1,6 +1,8 @@
 - tags:
   - sso
   - sso-users
+  when:
+    - services.sso|default(False)
   block:
   - name: sso - create required groups
     community.general.keycloak_group:

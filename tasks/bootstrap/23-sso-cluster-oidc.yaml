@@ -1,6 +1,8 @@
 - tags:
   - sso
   - sso-cluster-oidc
+  when:
+    - services.sso|default(False)
   block:
   - name: sso - create KeycloakClient for the cluster
     kubernetes.core.k8s:
@@ -53,7 +55,7 @@
       existing_idp_names: "{{ oauth_raw.resources[0].spec.identityProviders | default([]) | map(attribute='name') | list }}"
 
   - when:
-      - "'helms-deep-single-sign-on' not in existing_idp_names"
+      - "'single-sign-on' not in existing_idp_names"
     block:
       - name: sso - merge updated OAuth configuration
         set_fact:

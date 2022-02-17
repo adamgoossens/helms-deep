@@ -1,6 +1,8 @@
 ---
 - tags:
-  - sso
+    - sso
+  when:
+    - services.sso|default(False)
   block:
   - name: sso - create Keycloak resources
     kubernetes.core.k8s:
@@ -20,7 +22,7 @@
     delay: 30
 
   - set_fact:
-      keycloak_url: "{{ keycloak.resources[0].status.internalURL }}"
+      keycloak_url: "{{ keycloak.resources[0].status.externalURL }}"
 
   - name: sso - fetch Keycloak admin credential secret
     kubernetes.core.k8s_info:

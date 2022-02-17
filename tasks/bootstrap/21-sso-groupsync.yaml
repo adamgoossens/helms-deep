@@ -1,6 +1,8 @@
 - tags:
   - sso
   - sso-groupsync
+  when:
+    - services.sso|default(False)
   block:
   - name: sso - fetch credential for groupsync user
     kubernetes.core.k8s_info:

@@ -1,0 +1,37 @@
+---
+- tags:
+  - aap
+  when:
+    - services.aap|default(False)
+  block:
+    - name: aap - create an Automation Controller
+      kubernetes.core.k8s:
+        definition: "{{ lookup('template', 'bootstrap-templates/aap/controller.yaml.j2') }}"
+
+    - name: aap - wait for Automation Controller to roll out (10 mins)
+      kubernetes.core.k8s_info:
+        api_version: automationcontroller.ansible.com/v1beta1
+        kind: AutomationController
+        namespace: ansible-automation-platform
+        name: controller
+      register: controller
+      delay: 30
+      retries: 20
+      vars:
+        query: "conditions[?reason == 'Successful' && status == 'True']"
+      until:
+        - controller.resources[0].status is defined
+        - controller.resources[0].status | json_query(query) | length > 0
+
+    - name: aap - lookup secret for admin account
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: ansible-automation-platform
+        name: "{{ controller.resources[0].status.adminPasswordSecret }}"
+      register: admin_secret
+
+    - set_fact:
+        controller_fqdn: "{{ controller.resources[0].status.URL }}"
+        controller_username: "admin"
+        controller_password: "{{ admin_secret.resources[0].data.password | b64decode }}"

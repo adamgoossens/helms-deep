@@ -1,6 +1,8 @@
 ---
 - tags:
   - acs
+  when:
+    - services.acs|default(False)
   block:
   - name: acs - create Central resource
     kubernetes.core.k8s:
@@ -130,6 +132,17 @@
         validated: true
         active: true
     register: acs_sso
+
+  - name: acs - deploy the central collector
+    kubernetes.core.k8s:
+      definition:
+        kind: SecuredCluster
+        apiVersion: platform.stackrox.io/v1alpha1
+        metadata:
+          name: stackrox-secured-cluster-services
+          namespace: advanced-cluster-security
+        spec:
+          clusterName: central
 
   #- include_tasks: tasks/acs/deploy-collector.yaml
   #  vars:

@@ -1,6 +1,6 @@
 ##############################
 #
-# Secret needed for accessing Tower using AnsibleJob resources
+# Secret needed for accessing Controller using AnsibleJob tasks.
 #
 # Used for running playbooks during Application rollout/cleanup
 #
@@ -8,17 +8,18 @@
 ---
 - tags:
   - acm
+  when:
+    - services.acm|default(False)
+    - services.aap|default(False)
   block:
-  - name: acs - create secret for launching Tower jobs
+  - name: acs - create secret for launching Controller jobs
     kubernetes.core.k8s:
       definition:
         apiVersion: v1
         kind: Secret
         metadata:
-          name: toweraccess
+          name: controlleraccess
           namespace: helms-deep
         stringData:
-          token: "{{ vault_acm_aap_token }}"
-          host: "{{ ansible_tower_url }}"
-    when:
-      - ansible_tower_url is defined
+          token: "EMPTY FOR NOW"
+          host: "{{ controller_fqdn }}"

@@ -1,5 +1,5 @@
 - when:
-  - token is not defined
+  - k8s_api_key is not defined
   block:
   - name: k8s - get kubernetes auth token
     community.okd.openshift_auth:
@@ -10,18 +10,4 @@
     register: k8s_auth_results
 
   - set_fact:
-      token: "{{ k8s_auth_results.k8s_auth.api_key }}"
-
-- name: k8s - tempfile for kubeconfig
-  tempfile:
-    state: file
-  register: kubeconfig
-
-- name: k8s - generate local kubeconfig
-  template:
-    src: "bootstrap-templates/kubeconfig.j2"
-    dest: "{{ kubeconfig.path }}"
-  vars:
-    api_url: "{{ host }}"
-    api_username: "{{ username }}"
-    api_token: "{{ token }}"
+      k8s_api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
