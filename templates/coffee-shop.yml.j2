@@ -1,0 +1,120 @@
+---
+apiVersion: v1                    
+kind: Namespace
+metadata:
+  name: ggithubcom-adamgoossens-coffee-shop-kustomize-ns
+---
+apiVersion: v1                    
+kind: Namespace
+metadata:
+  name: coffee-shop-prod
+---
+apiVersion: v1          
+kind: Namespace
+metadata:
+  name: coffee-shop-barista-prod       
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  annotations:
+    apps.open-cluster-management.io/reconcile-rate: high
+  name: ggithubcom-adamgoossens-coffee-shop-kustomize
+  namespace: ggithubcom-adamgoossens-coffee-shop-kustomize-ns
+spec:
+  pathname: 'https://github.com/adamgoossens/coffee-shop-kustomize.git'
+  type: Git
+---
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: coffee-shop-barista-prod
+  namespace: coffee-shop-barista-prod
+spec:
+  componentKinds:
+  - group: apps.open-cluster-management.io
+    kind: Subscription
+  descriptor: {}
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: 
+          - coffee-shop-barista-prod
+---
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: coffee-shop-prod
+  namespace: coffee-shop-prod
+spec:
+  componentKinds:
+  - group: apps.open-cluster-management.io
+    kind: Subscription
+  descriptor: {}
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: 
+          - coffee-shop-prod
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  annotations:
+    apps.open-cluster-management.io/git-branch: main
+    apps.open-cluster-management.io/git-path: coffee-shop/overlays/production
+    apps.open-cluster-management.io/reconcile-option: merge
+  labels:
+    app: coffee-shop-prod
+  name: coffee-shop-prod-subscription
+  namespace: coffee-shop-prod
+spec:
+  channel: ggithubcom-adamgoossens-coffee-shop-kustomize-ns/ggithubcom-adamgoossens-coffee-shop-kustomize
+  placement:
+    placementRef:
+      kind: PlacementRule
+      name: coffee-shop-placement
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Subscription
+metadata:
+  annotations:
+    apps.open-cluster-management.io/git-branch: main
+    apps.open-cluster-management.io/git-path: barista/overlays/production
+    apps.open-cluster-management.io/reconcile-option: merge
+  labels:
+    app: coffee-shop-barista-prod
+  name: coffee-shop-barista-prod-subscription
+  namespace: coffee-shop-barista-prod
+spec:
+  channel: ggithubcom-adamgoossens-coffee-shop-kustomize-ns/ggithubcom-adamgoossens-coffee-shop-kustomize
+  placement:
+    placementRef:
+      kind: PlacementRule
+      name: coffee-shop-placement
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  labels:
+    app: coffee-shop
+  name: coffee-shop-placement
+  namespace: coffee-shop-barista-prod
+spec:
+  clusterSelector:
+    matchLabels:
+      'coffee-shop': 'true'
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  labels:
+    app: coffee-shop
+  name: coffee-shop-placement
+  namespace: coffee-shop-prod
+spec:
+  clusterSelector:
+    matchLabels:
+      'coffee-shop': 'true'

@@ -68,6 +68,7 @@
     register: central_htpasswd
 
   - set_fact:
+      stackrox_central_endpoint: "{{ central_route.resources[0].spec.host }}:443"
       stackrox_central_url: "https://{{ central_route.resources[0].spec.host }}"
       console_links: "{{ console_links | default([]) + [acs_link] }}"
       stackrox_admin_credential: "{{ central_htpasswd.resources[0].data['password'] | b64decode }}"

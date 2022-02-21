@@ -1,0 +1,110 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: coffee-shop-pipeline
+spec: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workspace
+  namespace: coffee-shop-pipeline
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: maven-cache
+  namespace: coffee-shop-pipeline
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 2G
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: coffee-shop
+  namespace: coffee-shop-pipeline
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: coffee-shop:latest
+  runPolicy: Serial
+  source:
+    binary: {}
+    type: Binary
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: openjdk-11-rhel7:latest
+    type: Source
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: openjdk-11-rhel7
+  namespace: coffee-shop-pipeline
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+  - from:
+      kind: DockerImage
+      name: registry.redhat.io/openjdk/openjdk-11-rhel7:1.1-11
+    generation: 2
+    importPolicy: {}
+    name: latest
+    referencePolicy:
+      type: Source
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: barista
+  namespace: coffee-shop-pipeline
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: barista:latest
+  runPolicy: Serial
+  source:
+    binary: {}
+    type: Binary
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: openjdk-11-rhel7:latest
+    type: Source
+---
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  name: coffee-shop
+  namespace: coffee-shop-pipeline
+spec:
+  lookupPolicy:
+    local: false
+---
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  name: barista
+  namespace: coffee-shop-pipeline
+spec:
+  lookupPolicy:
+    local: false

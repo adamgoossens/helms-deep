@@ -1,0 +1,144 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    coffee_shop_git_repo: 'https://github.com/adamgoossens/coffee-shop-kustomize.git'
+    barista_path: 'barista'
+    frontend_path: 'coffee-shop'
+  tasks:
+    - import_tasks: tasks/k8s-auth.yaml
+      vars:
+        host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+        validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+        username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
+        password: "{{ lookup('env', 'OPENSHIFT_API_PASSWORD') }}"
+      tags:
+      - k8s
+
+    #######################
+    # Start main block
+    #######################
+    - module_defaults:
+        group/kubernetes.core.k8s:
+          api_key: "{{ k8s_api_key }}"
+          validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+          host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+      block:
+      - name: create ACM resources to install OpenShift Serverless
+        kubernetes.core.k8s:
+          definition: "{{ lookup('template', 'templates/coffee-shop-serverless.yml.j2') | from_yaml_all | list }}"
+
+      - name: create ACM resources for the coffee-shop application
+        kubernetes.core.k8s:
+          definition: "{{ lookup('template', 'templates/coffee-shop.yml.j2') | from_yaml_all | list }}"
+
+      - name: install OpenShift Pipelines
+        kubernetes.core.k8s:
+          definition:
+            apiVersion: operators.coreos.com/v1alpha1
+            kind: Subscription
+            metadata:
+              name: openshift-pipelines-operator-rh
+              namespace: openshift-operators
+            spec:
+              channel: stable
+              installPlanApproval: Automatic
+              name: openshift-pipelines-operator-rh
+              source: redhat-operators
+              sourceNamespace: openshift-marketplace
+
+      - name: wait for Pipelines install to complete
+        kubernetes.core.k8s_info:
+          api_version: "operators.coreos.com/v1alpha1"
+          kind: Subscription
+          name: openshift-pipelines-operator-rh
+          namespace: openshift-operators
+        register: sub
+        until:
+          - sub.resources[0].status is defined
+          - sub.resources[0].status.state | default('foo') | lower == 'atlatestknown'
+        retries: 30
+        delay: 10
+
+      - name: create required resources
+        kubernetes.core.k8s:
+          definition: "{{ lookup('template', 'templates/coffee-shop/resources.yml') | from_yaml_all | list }}"
+
+      - name: lookup ACS credential
+        kubernetes.core.k8s_info:
+          api_version: v1
+          kind: Secret
+          namespace: advanced-cluster-security
+          name: central-htpasswd
+        register: acs_cred
+
+      - name: lookup ACS route
+        kubernetes.core.k8s_info:
+          api_version: route.openshift.io/v1
+          kind: Route
+          namespace: advanced-cluster-security
+          name: central
+        register: acs_route
+
+      - set_fact:
+          acs_username: "admin"
+          acs_password: "{{ acs_cred.resources[0].data.password | b64decode }}"
+          acs_host: "https://{{ acs_route.resources[0].spec.host }}"
+
+      - module_defaults:
+          group/community.stackrox.stackrox:
+            central: "{{ acs_host }}:443"
+            username: "{{ acs_username }}"
+            password: "{{ acs_password }}"
+            validate_certs: False
+        block:  
+        - name: generate cicd token
+          community.stackrox.apitoken:
+            name: "coffee-shop-cicd"
+            state: present
+            role: "Continuous Integration"
+            validate_certs: False
+          register: token
+
+        - name: generate init bundle
+          community.stackrox.initbundle:
+            name: "test-init-bundle"
+            state: present
+          register: ib
+
+        - debug: var=ib
+
+        - name: create a secret with the token
+          when:
+            - token.changed
+          kubernetes.core.k8s:
+            definition:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                namespace: coffee-shop-pipeline
+                name: acs-token
+              data:
+                api-token: "{{ token.tokens[0].token | b64encode }}"
+
+        - name: list all tokens
+          community.stackrox.apitoken:
+            state: list
+          register: all_tokens
+
+        - name: fetch token by name
+          community.stackrox.apitoken:
+            name: 'coffee-shop-cicd'
+            state: get
+          register: one_token
+
+        - name: fetch token by name including revoked
+          community.stackrox.apitoken:
+            name: 'coffee-shop-cicd'
+            state: get
+            include_revoked: True
+          register: all_with_revoked
+
+        - debug: var=all_tokens
+        - debug: var=one_token
+        - debug: var=all_with_revoked

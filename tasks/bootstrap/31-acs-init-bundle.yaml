@@ -29,6 +29,17 @@
         namespace: advanced-cluster-security
       register: ib_secrets
 
+    - name: acs - add acs-host to sensor-tls
+      kubernetes.core.k8s:
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: sensor-tls
+            namespace: advanced-cluster-security
+          data:
+            acs-host: "{{ stackrox_central_endpoint | b64encode }}"
+
     - name: acs - add required annotations to init bundle secrets
       kubernetes.core.k8s:
         definition:
