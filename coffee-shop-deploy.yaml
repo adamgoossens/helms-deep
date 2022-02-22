@@ -91,7 +91,7 @@
             username: "{{ acs_username }}"
             password: "{{ acs_password }}"
             validate_certs: False
-        block:  
+        block:
         - name: generate cicd token
           community.stackrox.apitoken:
             name: "coffee-shop-cicd"
@@ -99,14 +99,6 @@
             role: "Continuous Integration"
             validate_certs: False
           register: token
-
-        - name: generate init bundle
-          community.stackrox.initbundle:
-            name: "test-init-bundle"
-            state: present
-          register: ib
-
-        - debug: var=ib
 
         - name: create a secret with the token
           when:
@@ -120,25 +112,3 @@
                 name: acs-token
               data:
                 api-token: "{{ token.tokens[0].token | b64encode }}"
-
-        - name: list all tokens
-          community.stackrox.apitoken:
-            state: list
-          register: all_tokens
-
-        - name: fetch token by name
-          community.stackrox.apitoken:
-            name: 'coffee-shop-cicd'
-            state: get
-          register: one_token
-
-        - name: fetch token by name including revoked
-          community.stackrox.apitoken:
-            name: 'coffee-shop-cicd'
-            state: get
-            include_revoked: True
-          register: all_with_revoked
-
-        - debug: var=all_tokens
-        - debug: var=one_token
-        - debug: var=all_with_revoked
